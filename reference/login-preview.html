@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manamaalai Matrimony - Login Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Noto+Sans+Tamil:wght@400;500;600&family=Noto+Serif+Tamil:wght@600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream: #EEE4DA;
+      --sand: #D8C4AC;
+      --dusty-pink: #C8A49F;
+      --burgundy: #4D0E13;
+      --antique-gold: #B08A4F;
+      --ivory: #FFFDF9;
+      --input-bg: #F7F1EA;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: var(--cream);
+      font-family: 'Poppins', 'Noto Sans Tamil', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+      position: relative;
+    }
+    /* Masonry background */
+    .masonry-bg {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      gap: 16px;
+      padding: 16px;
+      z-index: 1;
+      opacity: 0.35;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .col-up {
+      animation: driftUp 75s linear infinite;
+    }
+    .col-down {
+      animation: driftDown 85s linear infinite;
+    }
+    @keyframes driftUp {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-50%); }
+    }
+    @keyframes driftDown {
+      0% { transform: translateY(-50%); }
+      100% { transform: translateY(0); }
+    }
+    .pin {
+      background: var(--ivory);
+      border: 1px solid var(--sand);
+      border-radius: 20px;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(77, 14, 19, 0.05);
+    }
+    .pin-icon {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pin-caption {
+      font-size: 12px;
+      color: var(--burgundy);
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+    /* Soft cream glow over center */
+    .glow-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(238, 228, 218, 0.94) 0%, rgba(238, 228, 218, 0.75) 55%, rgba(238, 228, 218, 0.5) 100%);
+      z-index: 2;
+      pointer-events: none;
+    }
+    /* Card */
+    .card-container {
+      position: relative;
+      z-index: 3;
+      width: 100%;
+      max-width: 420px;
+      padding: 16px;
+    }
+    .login-card {
+      background: var(--ivory);
+      border: 1px solid var(--sand);
+      border-radius: 32px;
+      box-shadow: 0 16px 40px rgba(77, 14, 19, 0.12), 0 2px 6px rgba(176, 138, 79, 0.08);
+      overflow: hidden;
+      position: relative;
+    }
+    /* Thoranam Strip */
+    .thoranam {
+      height: 18px;
+      background: linear-gradient(90deg, #B08A4F 0%, #C8A49F 50%, #B08A4F 100%);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 0 12px;
+    }
+    .mango-leaf {
+      width: 12px;
+      height: 10px;
+      background: var(--ivory);
+      clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+      opacity: 0.85;
+    }
+    .card-body {
+      padding: 24px;
+      position: relative;
+    }
+    .lang-toggle-wrap {
+      display: flex;
+      justify-content: flex-end;
+    }
+    .lang-toggle {
+      border: 1px solid var(--sand);
+      background: rgba(216, 196, 172, 0.2);
+      border-radius: 16px;
+      padding: 4px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--burgundy);
+      font-weight: 500;
+    }
+    .brand-header {
+      text-align: center;
+      margin-top: 8px;
+      margin-bottom: 20px;
+    }
+    .logo-frame {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      border: 2px solid var(--antique-gold);
+      box-shadow: 0 0 0 4px rgba(176, 138, 79, 0.15);
+      margin: 0 auto 12px;
+      background: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .logo-frame img {
+      width: 76px;
+      height: 76px;
+      object-fit: contain;
+    }
+    .brand-title {
+      font-family: 'Cormorant Garamond', 'Noto Serif Tamil', serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--burgundy);
+      letter-spacing: 0.5px;
+    }
+    .brand-tagline {
+      font-size: 12px;
+      color: #6E5A50;
+      margin-top: 2px;
+    }
+    .diamond-divider {
+      color: var(--antique-gold);
+      font-size: 10px;
+      margin-top: 6px;
+      letter-spacing: 3px;
+    }
+    /* Tabs */
+    .tabs {
+      display: flex;
+      background: var(--input-bg);
+      border-radius: 24px;
+      padding: 3px;
+      margin-bottom: 20px;
+      border: 1px solid rgba(216, 196, 172, 0.5);
+    }
+    .tab {
+      flex: 1;
+      padding: 8px 12px;
+      text-align: center;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      color: #6E5A50;
+      transition: all 0.2s;
+    }
+    .tab.active {
+      background: var(--ivory);
+      color: var(--burgundy);
+      font-weight: 600;
+      box-shadow: 0 2px 6px rgba(77, 14, 19, 0.08);
+    }
+    /* Inputs */
+    .input-group {
+      margin-bottom: 14px;
+    }
+    .input-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--burgundy);
+      margin-bottom: 6px;
+      display: block;
+    }
+    .input-box {
+      width: 100%;
+      height: 46px;
+      background: var(--input-bg);
+      border: 1px solid var(--sand);
+      border-radius: 12px;
+      padding: 0 14px;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--burgundy);
+      outline: none;
+    }
+    .input-box:focus {
+      border-color: var(--antique-gold);
+    }
+    .input-with-icon {
+      position: relative;
+    }
+    .input-icon-btn {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #6E5A50;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    /* Phone input */
+    .phone-row {
+      display: flex;
+      gap: 8px;
+    }
+    .prefix-box {
+      width: 64px;
+      height: 46px;
+      background: var(--input-bg);
+      border: 1px solid var(--sand);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--burgundy);
+    }
+    /* Checkbox & Forgot */
+    .row-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      font-size: 12px;
+    }
+    .remember-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #6E5A50;
+      cursor: pointer;
+    }
+    .forgot-link {
+      color: var(--burgundy);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    /* Buttons */
+    .primary-btn {
+      width: 100%;
+      height: 48px;
+      background: var(--burgundy);
+      color: var(--ivory);
+      border: none;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(77, 14, 19, 0.25);
+      transition: opacity 0.2s;
+    }
+    .primary-btn:hover {
+      opacity: 0.95;
+    }
+    .secondary-btn {
+      width: 100%;
+      height: 44px;
+      margin-top: 12px;
+      background: transparent;
+      color: var(--burgundy);
+      border: 1px solid var(--sand);
+      border-radius: 22px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .footer-link-wrap {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 13px;
+      color: #6E5A50;
+    }
+    .footer-link {
+      color: var(--burgundy);
+      font-weight: 600;
+      text-decoration: none;
+      margin-left: 4px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Drift masonry -->
+  <div class="masonry-bg">
+    <div class="col col-up">
+      <div class="pin">
+        <div class="pin-icon">🌸</div>
+        <div class="pin-caption">Malli Poo</div>
+      </div>
+      <div class="pin">
+        <div class="pin-icon">🪔</div>
+        <div class="pin-caption">Kuthuvilakku</div>
+      </div>
+      <div class="pin">
+        <div class="pin-icon">🏺</div>
+        <div class="pin-caption">Kalasam</div>
+      </div>
+      <div class="pin">
+        <div class="pin-icon">✨</div>
+        <div class="pin-caption">Kolam</div>
+      </div>
+      <div class="pin">
+        <div class="pin-icon">🌸</div>
+        <div class="pin-caption">Malli Poo</div>
+      </div>
+    </div>
+    <div class="col col-down">
+      <div class="pin">
+        <div class="pin-icon">🏛️</div>
+        <div class="pin-caption">Temple Arch</div>
+      </div>
+      <div class="pin">
+        <div class="pin-icon">🌺</div>
+        <div class="pin-caption">Maalai</div>
+      </div>
+      <div class="pin">
+        <div class="pin-icon">⭕</div>
+        <div class="pin-caption">Valaiyal</div>
+      </div>
+      <div class="pin">
+        <div class="pin-icon">🏛️</div>
+        <div class="pin-caption">Temple Arch</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="glow-overlay"></div>
+
+  <div class="card-container">
+    <div class="login-card">
+      <div class="thoranam">
+        <div class="mango-leaf"></div>
+        <div class="mango-leaf"></div>
+        <div class="mango-leaf"></div>
+        <div class="mango-leaf"></div>
+        <div class="mango-leaf"></div>
+        <div class="mango-leaf"></div>
+      </div>
+
+      <div class="card-body">
+        <div class="lang-toggle-wrap">
+          <button class="lang-toggle">English | தமிழ்</button>
+        </div>
+
+        <div class="brand-header">
+          <div class="logo-frame">
+            <img src="../asset/logo.png" alt="Manamaalai Logo" onerror="this.src='../src/assets/images/logo.png'">
+          </div>
+          <h1 class="brand-title">Manamaalai</h1>
+          <p class="brand-tagline">Trusted Tamil Matrimony</p>
+          <div class="diamond-divider">◆ ◆ ◆</div>
+        </div>
+
+        <div class="tabs">
+          <div class="tab active">Email</div>
+          <div class="tab">Mobile OTP</div>
+        </div>
+
+        <form>
+          <div class="input-group">
+            <label class="input-label">Email Address</label>
+            <input type="email" class="input-box" placeholder="name@example.com" value="karthik.senthil.iim@gmail.com">
+          </div>
+
+          <div class="input-group">
+            <label class="input-label">Password</label>
+            <div class="input-with-icon">
+              <input type="password" class="input-box" placeholder="••••••••" value="••••••••">
+              <button type="button" class="input-icon-btn">Show</button>
+            </div>
+          </div>
+
+          <div class="row-meta">
+            <label class="remember-label">
+              <input type="checkbox" checked> Remember me
+            </label>
+            <a href="#" class="forgot-link">Forgot password?</a>
+          </div>
+
+          <button type="button" class="primary-btn">Login</button>
+          <button type="button" class="secondary-btn">Continue with Google</button>
+
+          <div class="footer-link-wrap">
+            New here? <a href="#" class="footer-link">Create your profile</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
