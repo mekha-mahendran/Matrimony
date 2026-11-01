@@ -9,8 +9,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { AIBioGeneratorModal } from '../components/AIBioGeneratorModal';
 import { CustomIcon } from '../components/CustomIcon';
 import { Header } from '../components/Header';
+import { JathagamDocumentModal } from '../components/JathagamDocumentModal';
 import { Language, Translations } from '../localization';
 import { StorageService } from '../services/storage';
 import {
@@ -44,6 +46,10 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
   const [about, setAbout] = useState(profile.about);
   const [fatherOcc, setFatherOcc] = useState(profile.family.fatherOccupation);
   const [motherOcc, setMotherOcc] = useState(profile.family.motherOccupation);
+
+  // Assisted Modals
+  const [showAIBioModal, setShowAIBioModal] = useState(false);
+  const [showJathagamModal, setShowJathagamModal] = useState(false);
 
   const handleSave = async () => {
     const updated: MatrimonyProfile = {
@@ -92,13 +98,46 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
           <Text style={[styles.label, { marginTop: Spacing.md }]}>Current City</Text>
           <TextInput style={styles.input} value={currentCity} onChangeText={setCurrentCity} />
 
-          <Text style={[styles.label, { marginTop: Spacing.md }]}>About Candidate</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.md, marginBottom: 4 }}>
+            <Text style={styles.label}>About Candidate</Text>
+            <TouchableOpacity
+              style={styles.aiSparkleBtn}
+              onPress={() => setShowAIBioModal(true)}
+              activeOpacity={0.8}
+            >
+              <CustomIcon name="sparkles" size={13} color="#93A220" />
+              <Text style={styles.aiSparkleBtnText}>✨ AI Bio Generator</Text>
+            </TouchableOpacity>
+          </View>
           <TextInput
             style={[styles.input, { height: 90, textAlignVertical: 'top' }]}
             multiline
             value={about}
             onChangeText={setAbout}
           />
+        </View>
+
+        {/* Jathagam Horoscope Document Section */}
+        <View style={styles.card}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={styles.sectionTitle}>Jathagam (Horoscope) Chart</Text>
+            <View style={styles.verifiedBadge}>
+              <Text style={styles.verifiedBadgeText}>Verified</Text>
+            </View>
+          </View>
+
+          <Text style={styles.docSubText}>
+            Lagnam: {profile.horoscope.lagnam || 'Thulam'} • Rasi: {profile.horoscope.rasi} • Star: {profile.horoscope.nakshatram}
+          </Text>
+
+          <TouchableOpacity
+            style={styles.jathagamActionBtn}
+            onPress={() => setShowJathagamModal(true)}
+            activeOpacity={0.85}
+          >
+            <CustomIcon name="education" size={16} color="#49141C" />
+            <Text style={styles.jathagamActionBtnText}>View / Upload Verified Jathagam PDF</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.card}>
@@ -128,6 +167,26 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
           <Text style={styles.saveBtnText}>Save Changes</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* AI Bio Generator Modal */}
+      <AIBioGeneratorModal
+        visible={showAIBioModal}
+        onClose={() => setShowAIBioModal(false)}
+        onApplyBio={(generatedText) => setAbout(generatedText)}
+        candidateContext={{
+          name: profile.name,
+          occupation,
+          currentCity,
+          qualification: profile.educationCareer.qualification,
+          nativeDistrict: profile.nativeDistrict,
+        }}
+      />
+
+      {/* Jathagam Document & Chart Modal */}
+      <JathagamDocumentModal
+        visible={showJathagamModal}
+        onClose={() => setShowJathagamModal(false)}
+      />
     </View>
   );
 };
@@ -185,5 +244,55 @@ const styles = StyleSheet.create({
     color: Colors.creme,
     fontSize: Typography.bodyLarge,
     fontWeight: '700',
+  },
+  aiSparkleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF0D6',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#93A220',
+    gap: 4,
+  },
+  aiSparkleBtnText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#6A7513',
+  },
+  docSubText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  verifiedBadge: {
+    backgroundColor: '#EEF0D6',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  verifiedBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#6A7513',
+  },
+  jathagamActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FAF7ED',
+    borderWidth: 1.2,
+    borderColor: '#E6DFCD',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  jathagamActionBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#49141C',
   },
 });

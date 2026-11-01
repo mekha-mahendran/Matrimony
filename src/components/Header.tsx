@@ -1,5 +1,16 @@
+/**
+ * Manamaalai Matrimony — Header Component
+ *
+ * Wedding-Inspired Official Palette:
+ *   Plum Burgundy: #49141C | Lime Olive: #93A220 | Dusty Rose: #D17575 | Vanilla: #FFFBE2
+ *
+ * Navigation Requirement:
+ *   Light Vanilla background. Never dark burgundy. Blends seamlessly with the screen.
+ */
+
 import React from 'react';
 import {
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -7,9 +18,24 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Language, Translations } from '../localization';
-import { BorderRadius, Colors, Shadows, Spacing, Typography } from '../theme';
+import { Spacing } from '../theme';
 import { CustomIcon } from './CustomIcon';
 import { GarlandLogo } from './GarlandLogo';
+
+/* ── Brand palette (local tokens) ─────────────────────────────────────────── */
+const C = {
+  vanilla:      '#FFFFFF',
+  vanillaTint:  '#F7F6F1',
+  plumBurgundy: '#49141C',
+  limeOlive:    '#93A220',
+  limeOliveDark:'#6A7513',
+  limeOlivePale:'rgba(147, 162, 32, 0.16)',
+  dustyRose:    '#D17575',
+  sandBorder:   '#E6E2CF',
+  textSecondary:'#523E42',
+  iconBtnBg:    '#F7F6F1',
+  iconBtnBorder:'#E6E2CF',
+};
 
 interface HeaderProps {
   language: Language;
@@ -42,214 +68,256 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <View style={[styles.outerContainer, { paddingTop: Math.max(insets.top, 8) }]}>
       <View style={styles.contentRow}>
-        {/* Left: Back Button OR Minimal Brand Seal */}
+
+        {/* ── Left: Back button OR Brand logo ───────────────────────────── */}
         {showBack ? (
           <TouchableOpacity
-            style={styles.iconCircleButton}
+            style={styles.iconBtn}
             onPress={onBackPress}
             activeOpacity={0.7}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <CustomIcon name="chevron-left" size={20} color="#FFFFFF" />
+            <CustomIcon name="chevron-left" size={20} color={C.plumBurgundy} />
           </TouchableOpacity>
         ) : (
           <View style={styles.brandCrest}>
-            <GarlandLogo size="small" showSubtitle={false} lightMode={true} />
+            {/* Logo on light Vanilla background */}
+            <GarlandLogo size="small" showSubtitle={false} lightMode={false} />
           </View>
         )}
 
-        {/* Center: Title or Minimal Tamil Blessing */}
+        {/* ── Center: Screen title OR blessing tagline ──────────────────── */}
         {title ? (
           <View style={styles.titleWrap}>
             <Text style={styles.titleText} numberOfLines={1}>
               {title}
             </Text>
-            {subtitle && (
+            {subtitle ? (
               <Text style={styles.subtitleText} numberOfLines={1}>
                 {subtitle}
               </Text>
-            )}
+            ) : null}
           </View>
         ) : (
           <View style={styles.centerBlessing}>
+            {/* Auspicious blessing tag */}
             <View style={styles.blessingTag}>
+              <Text style={styles.blessingTagDot}>✦</Text>
               <Text style={styles.blessingText}>வாழ்க வளமுடன்</Text>
+              <Text style={styles.blessingTagDot}>✦</Text>
             </View>
-            <Text style={styles.curatedSubtitle}>
+            <Text style={styles.blessingSubtitle}>
               {language === 'ta' ? 'மணமாலை மேட்ரிமோனி' : 'Royal Tamil Matrimony'}
             </Text>
           </View>
         )}
 
-        {/* Right Action Icons: Language Toggle + Admin + Notifications */}
-        <View style={styles.actionsCluster}>
-          {/* Minimal Editorial Language Switcher */}
+        {/* ── Right: Language pill + Admin + Notification ───────────────── */}
+        <View style={styles.actionsRow}>
+
+          {/* Language switcher pill */}
           <TouchableOpacity
-            style={styles.langPillSwitch}
+            style={styles.langPill}
             onPress={onToggleLanguage}
             activeOpacity={0.8}
           >
-            <View style={[styles.langSegment, language === 'ta' && styles.langSegmentActive]}>
+            <View style={[styles.langSeg, language === 'ta' && styles.langSegActive]}>
               <Text style={[styles.langSegText, language === 'ta' && styles.langSegTextActive]}>
                 தமிழ்
               </Text>
             </View>
-            <View style={[styles.langSegment, language === 'en' && styles.langSegmentActive]}>
+            <View style={[styles.langSeg, language === 'en' && styles.langSegActive]}>
               <Text style={[styles.langSegText, language === 'en' && styles.langSegTextActive]}>
                 EN
               </Text>
             </View>
           </TouchableOpacity>
 
-          {/* Admin shortcut if admin */}
-          {onAdminPress && (
+          {/* Admin shortcut button */}
+          {onAdminPress ? (
             <TouchableOpacity
-              style={[styles.iconCircleButton, isAdmin && styles.iconCircleBtnActive]}
+              style={[styles.iconBtn, isAdmin && styles.iconBtnAdmin]}
               onPress={onAdminPress}
               activeOpacity={0.7}
             >
               <CustomIcon
                 name="admin"
                 size={16}
-                color={isAdmin ? Colors.goldAccent : 'rgba(255, 255, 255, 0.7)'}
+                color={isAdmin ? C.limeOlive : C.plumBurgundy}
               />
             </TouchableOpacity>
-          )}
+          ) : null}
 
-          {/* Notification Bell with Auspicious Ruby Badge */}
-          {onNotificationPress && (
+          {/* Notification bell button */}
+          {onNotificationPress ? (
             <TouchableOpacity
-              style={styles.iconCircleButton}
+              style={styles.iconBtn}
               onPress={onNotificationPress}
               activeOpacity={0.7}
             >
-              <CustomIcon name="bell" size={18} color="#FFFFFF" />
+              <CustomIcon name="bell" size={18} color={C.plumBurgundy} />
               {unreadNotificationsCount > 0 && (
-                <View style={styles.notifBadge}>
-                  <Text style={styles.notifBadgeText}>
+                <View style={styles.notifDot}>
+                  <Text style={styles.notifDotText}>
                     {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
                   </Text>
                 </View>
               )}
             </TouchableOpacity>
-          )}
+          ) : null}
+
         </View>
       </View>
 
-      {/* Radiant Gold Hairline Divider */}
-      <View style={styles.goldDivider} />
+      {/* Decorative Lime Olive bottom hairline */}
+      <View style={styles.hairlineBar} />
     </View>
   );
 };
 
+const SERIF = Platform.select({ ios: 'Georgia', android: 'serif' }) || 'serif';
+
 const styles = StyleSheet.create({
+  /* ── Light Vanilla Navigation Header (Not Plum Burgundy) ─────────────── */
   outerContainer: {
-    backgroundColor: Colors.burgundyDark, // Deep Obsidian Sapphire
+    backgroundColor: C.vanilla,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(245, 158, 11, 0.25)',
+    borderBottomColor: C.sandBorder,
+    shadowColor: C.plumBurgundy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 3,
   },
+
   contentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
-    paddingBottom: 10,
-    minHeight: 54,
+    paddingBottom: 8,
+    minHeight: 52,
   },
+
+  /* ── Left — brand crest ──────────────────────────────────────────────── */
   brandCrest: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  iconCircleButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
-  },
-  iconCircleBtnActive: {
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-    borderColor: Colors.goldAccent,
-  },
+
+  /* ── Center — title / blessing ───────────────────────────────────────── */
   titleWrap: {
     flex: 1,
     marginHorizontal: Spacing.sm,
+    alignItems: 'center',
   },
   titleText: {
-    fontSize: Typography.titleMedium,
+    fontSize: 16.5,
     fontWeight: '700',
-    color: '#FFFFFF',
-    fontFamily: Typography.fontSerif,
+    color: C.plumBurgundy,
+    fontFamily: SERIF,
+    letterSpacing: 0.3,
   },
   subtitleText: {
-    fontSize: Typography.caption,
-    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 10.5,
+    color: C.textSecondary,
     marginTop: 1,
+    letterSpacing: 0.2,
   },
+
   centerBlessing: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   blessingTag: {
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    paddingHorizontal: 9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: C.limeOlivePale,
+    borderWidth: 1,
+    borderColor: C.limeOlive,
+    paddingHorizontal: 8,
     paddingVertical: 2.5,
-    borderRadius: 4,
-    borderWidth: 0.8,
-    borderColor: 'rgba(245, 158, 11, 0.4)',
+    borderRadius: 6,
+  },
+  blessingTagDot: {
+    fontSize: 8.5,
+    color: C.limeOliveDark,
+    fontWeight: '700',
   },
   blessingText: {
-    fontSize: Typography.caption,
+    fontSize: 10.5,
     fontWeight: '700',
-    color: Colors.goldAccent,
+    color: C.limeOliveDark,
+    fontFamily: SERIF,
     letterSpacing: 0.4,
   },
-  curatedSubtitle: {
-    fontSize: 9.5,
+  blessingSubtitle: {
+    fontSize: 9,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.72)',
-    letterSpacing: 0.5,
+    color: C.textSecondary,
+    letterSpacing: 0.6,
     marginTop: 2.5,
+    textTransform: 'uppercase',
   },
-  actionsCluster: {
+
+  /* ── Right — action cluster ──────────────────────────────────────────── */
+  actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
   },
-  langPillSwitch: {
+
+  /* Language pill */
+  langPill: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: BorderRadius.full,
+    backgroundColor: C.iconBtnBg,
+    borderRadius: 99,
     padding: 2.5,
-    borderWidth: 0.8,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderWidth: 1,
+    borderColor: C.sandBorder,
   },
-  langSegment: {
+  langSeg: {
     paddingHorizontal: 7.5,
-    paddingVertical: 3.5,
-    borderRadius: BorderRadius.full,
+    paddingVertical: 3,
+    borderRadius: 99,
   },
-  langSegmentActive: {
-    backgroundColor: Colors.goldAccent,
+  langSegActive: {
+    backgroundColor: C.limeOlive,
   },
   langSegText: {
     fontSize: 9.5,
     fontWeight: '700',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: C.textSecondary,
   },
   langSegTextActive: {
-    color: Colors.burgundyDark,
+    color: C.vanilla,
     fontWeight: '800',
   },
-  notifBadge: {
+
+  /* Icon circle buttons */
+  iconBtn: {
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
+    backgroundColor: C.iconBtnBg,
+    borderWidth: 1,
+    borderColor: C.iconBtnBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  iconBtnAdmin: {
+    backgroundColor: C.limeOlivePale,
+    borderColor: C.limeOlive,
+  },
+
+  /* Notification badge in Dusty Rose */
+  notifDot: {
     position: 'absolute',
-    top: -3,
-    right: -3,
-    backgroundColor: Colors.terracotta,
+    top: -2,
+    right: -2,
+    backgroundColor: C.dustyRose,
     borderRadius: 8,
     minWidth: 16,
     height: 16,
@@ -257,15 +325,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 3,
     borderWidth: 1.5,
-    borderColor: Colors.burgundyDark,
+    borderColor: C.vanilla,
   },
-  notifBadgeText: {
+  notifDotText: {
     color: '#FFFFFF',
     fontSize: 8.5,
     fontWeight: '900',
   },
-  goldDivider: {
-    height: 1,
-    backgroundColor: 'rgba(245, 158, 11, 0.25)',
+
+  /* Subtle Lime Olive decorative accent hairline */
+  hairlineBar: {
+    height: 1.5,
+    backgroundColor: C.limeOlive,
+    opacity: 0.4,
   },
 });

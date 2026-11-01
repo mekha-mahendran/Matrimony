@@ -25,12 +25,14 @@ interface AdminScreenProps {
   language: Language;
   onBack: () => void;
   onViewProfile: (profile: MatrimonyProfile) => void;
+  onOperationsPress?: () => void;
 }
 
 export const AdminDashboardScreen: React.FC<AdminScreenProps> = ({
   language,
   onBack,
   onViewProfile,
+  onOperationsPress,
 }) => {
   const t = Translations[language];
   const [profiles, setProfiles] = useState<MatrimonyProfile[]>([]);
@@ -120,6 +122,24 @@ export const AdminDashboardScreen: React.FC<AdminScreenProps> = ({
             <Text style={styles.statSub}>Gold & Platinum VIP</Text>
           </View>
         </View>
+
+        {/* Branch, Agent & Referral Operations Quick Link */}
+        <TouchableOpacity
+          style={styles.operationsBanner}
+          onPress={onOperationsPress}
+          activeOpacity={0.85}
+        >
+          <View style={styles.operationsIconBox}>
+            <CustomIcon name="briefcase" size={20} color="#FFFFFF" />
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={styles.operationsTitle}>Branch & Agent Management Portal</Text>
+            <Text style={styles.operationsSub}>
+              Manage 5 TN regional hubs, field bureaus & referral commission ledger
+            </Text>
+          </View>
+          <CustomIcon name="chevron-right" size={18} color="#FFFFFF" />
+        </TouchableOpacity>
 
         {/* Tab Filter */}
         <View style={styles.tabRow}>
@@ -380,5 +400,31 @@ const styles = StyleSheet.create({
     fontSize: Typography.caption,
     fontWeight: '700',
     color: Colors.danger,
+  },
+  operationsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#49141C',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: Spacing.md,
+  },
+  operationsIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  operationsTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  operationsSub: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 2,
   },
 });

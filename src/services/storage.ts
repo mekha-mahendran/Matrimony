@@ -22,6 +22,7 @@ const KEYS = {
   ADMIN_REPORTS: '@manamaalai_reports_v1',
   DONT_SHOW: '@manamaalai_dont_show_v1',
   UNLOCKED_CONTACTS: '@manamaalai_unlocked_contacts_v1',
+  POST_REG_WELCOME_SEEN: '@manamaalai_post_reg_welcome_seen_v1',
 };
 
 // Initial default logged-in user profile (Groom: Karthik Senthilnathan or Bride: Dr. Soundarya)
@@ -608,5 +609,22 @@ export class StorageService {
     }
 
     return result;
+  }
+
+  static async isPostRegistrationWelcomeSeen(): Promise<boolean> {
+    try {
+      const val = await AsyncStorage.getItem(KEYS.POST_REG_WELCOME_SEEN);
+      return val === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  static async setPostRegistrationWelcomeSeen(seen: boolean = true): Promise<void> {
+    try {
+      await AsyncStorage.setItem(KEYS.POST_REG_WELCOME_SEEN, seen ? 'true' : 'false');
+    } catch (e) {
+      console.warn('Failed to save welcome seen flag', e);
+    }
   }
 }

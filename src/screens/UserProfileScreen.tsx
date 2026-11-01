@@ -1,7 +1,22 @@
+/**
+ * Manamaalai Matrimony (மணமாலை) — Modern Golden Profile & Account Screen
+ *
+ * Implements the unified golden-amber dashboard styling:
+ * - Warm Golden Amber Hero Header (#F7BF2A)
+ * - Sticky TopBar with Brand Badge, Avatar, Language Switcher & Notifications
+ * - Floating White Metric Card with 3 Circular Ring Progress Gauges:
+ *     1. Profile Completeness %
+ *     2. Contacts Remaining
+ *     3. Interests Remaining
+ * - Deep Obsidian Membership Card (#1A1C1E) with Gold Upgrade CTA
+ * - Clean White Luxury Cards for Privacy, Assisted Suite & Settings
+ */
+
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Image,
+  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -10,19 +25,30 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle } from 'react-native-svg';
 import { CustomIcon } from '../components/CustomIcon';
-import { Header } from '../components/Header';
 import { Language, Translations } from '../localization';
-import { AuthService } from '../services/authService';
 import { StorageService } from '../services/storage';
-import {
-  BorderRadius,
-  Colors,
-  Shadows,
-  Spacing,
-  Typography,
-} from '../theme';
 import { CurrentUser, MatrimonyProfile } from '../types';
+
+/* ─── Luxury Design Tokens ─────────────────────────────────────────────────── */
+const PALETTE = {
+  amberHeader: '#F7BF2A',
+  amberHeaderDark: '#E5A914',
+  obsidianCard: '#1A1C1E',
+  pageBg: '#F8F5EE',
+  cardWhite: '#FFFFFF',
+  cardBorder: '#EFE8DC',
+  textInk: '#1C1614',
+  textMuted: '#7A6E67',
+  textSecondary: '#52453F',
+  maroon: '#49141C',
+  olive: '#6A7A14',
+  oliveSoft: '#EEF0D6',
+  rose: '#D17575',
+  redDot: '#E53E3E',
+};
 
 interface UserProfileScreenProps {
   language: Language;
@@ -33,9 +59,61 @@ interface UserProfileScreenProps {
   onMembershipPress: () => void;
   onViewMyProfile: (profile: MatrimonyProfile) => void;
   onLogout: () => void;
+  onFamilyCirclePress?: () => void;
+  onRelationshipManagerPress?: () => void;
+  onOperationsPress?: () => void;
   unreadCount: number;
   isAdmin: boolean;
 }
+
+/* ─── Circular Ring Gauge Helper ───────────────────────────────────────────── */
+const RingGauge: React.FC<{
+  value: number;
+  max?: number;
+  size?: number;
+  strokeWidth?: number;
+  color?: string;
+  trackColor?: string;
+  label: string;
+  unit: string;
+}> = ({
+  value,
+  max = 100,
+  size = 52,
+  strokeWidth = 3.5,
+  color = PALETTE.amberHeaderDark,
+  trackColor = '#EFE8DC',
+  label,
+  unit,
+}) => {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = Math.min(value / max, 1);
+  const strokeDashoffset = circumference - circumference * progress;
+
+  return (
+    <View style={styles.gaugeContainer}>
+      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+        <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
+          <Circle cx={size / 2} cy={size / 2} r={radius} stroke={trackColor} strokeWidth={strokeWidth} fill="none" />
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeDasharray={`${circumference} ${circumference}`}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            fill="none"
+          />
+        </Svg>
+        <Text style={styles.gaugeValueText}>{label}</Text>
+      </View>
+      <Text style={styles.gaugeUnitText}>{unit}</Text>
+    </View>
+  );
+};
 
 export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   language,
@@ -46,10 +124,16 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   onMembershipPress,
   onViewMyProfile,
   onLogout,
+  onFamilyCirclePress,
+  onRelationshipManagerPress,
+  onOperationsPress,
   unreadCount,
   isAdmin,
 }) => {
+  const insets = useSafeAreaInsets();
+  const isTa = language === 'ta';
   const t = Translations[language];
+
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [myProfile, setMyProfile] = useState<MatrimonyProfile | null>(null);
   const [hidePhone, setHidePhone] = useState(true);
@@ -95,265 +179,241 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
     }
   };
 
-  const handleSwitchAccount = async (profileId: string) => {
-    const p = await StorageService.getProfileById(profileId);
-    if (p) {
-      await StorageService.updateCurrentUser({
-        activeProfileId: p.id,
-        phone: p.phone.replace(/[^0-9]/g, ''),
-        email: p.email,
-      });
-      await loadData();
-      Alert.alert('Account Switched', `Active candidate profile switched to ${p.name}.`);
-    }
-  };
-
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Matrimony Account',
-      'Are you sure you want to permanently delete your Manamaalai matrimony profile? All personal data, horoscope details, and interests will be removed.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Permanently Delete',
-          style: 'destructive',
-          onPress: async () => {
-            if (myProfile) {
-              await StorageService.suspendProfile(myProfile.id);
-            }
-            onLogout();
-          },
-        },
-      ]
-    );
-  };
+  const completeness = myProfile?.profileCompleteness || 78;
 
   return (
-    <View style={styles.container}>
+    <View style={styles.root}>
       <StatusBar barStyle="dark-content" />
-      <Header
-        language={language}
-        onToggleLanguage={onToggleLanguage}
-        unreadNotificationsCount={unreadCount}
-        onNotificationPress={onNotificationPress}
-        onAdminPress={onAdminPress}
-        isAdmin={isAdmin}
-        title={t.tabProfile}
-        subtitle="Account settings & candidate privacy"
-      />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Profile Card Header */}
-        {myProfile && (
-          <View style={styles.profileHeaderCard}>
-            <View style={styles.avatarRow}>
-              <Image source={{ uri: myProfile.photos[0] }} style={styles.avatar} />
-
-              <View style={{ flex: 1 }}>
-                <View style={styles.nameRow}>
-                  <Text style={styles.profileName} numberOfLines={1}>
-                    {myProfile.name}
-                  </Text>
-                  {myProfile.isVerified && (
-                    <CustomIcon name="shield" size={16} color={Colors.verifiedBlue} />
-                  )}
-                </View>
-
-                <Text style={styles.matrimonyIdText}>ID: {myProfile.matrimonyId}</Text>
-                <Text style={styles.detailText}>
-                  {myProfile.age} Yrs • {myProfile.educationCareer.occupation}
-                </Text>
-                <Text style={styles.locationText}>{myProfile.currentCity}, Tamil Nadu</Text>
-              </View>
+      {/* ── 1. WARM GOLDEN AMBER HEADER ZONE ──────────────────────────────── */}
+      <View style={[styles.amberHeaderZone, { paddingTop: Math.max(insets.top, 12) }]}>
+        <View style={styles.topBarRow}>
+          <View style={styles.brandRow}>
+            <View style={styles.brandLogoCircle}>
+              <Image
+                source={require('../assets/images/logo.png')}
+                style={{ width: 20, height: 20 }}
+                resizeMode="contain"
+              />
             </View>
-
-            {/* Completeness Bar */}
-            <View style={styles.completenessWrap}>
-              <View style={styles.completenessHeader}>
-                <Text style={styles.completenessLabel}>Profile Completeness</Text>
-                <Text style={styles.completenessVal}>{myProfile.profileCompleteness}%</Text>
-              </View>
-              <View style={styles.barTrack}>
-                <View
-                  style={[styles.barFill, { width: `${myProfile.profileCompleteness}%` }]}
-                />
-              </View>
-            </View>
-
-            {/* Quick Action Buttons */}
-            <View style={styles.headerBtnRow}>
-              <TouchableOpacity
-                style={styles.previewBtn}
-                onPress={() => onViewMyProfile(myProfile)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.previewBtnText}>Preview Profile</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.editBtn}
-                onPress={onEditProfile}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.editBtnText}>Edit Details</Text>
-              </TouchableOpacity>
+            <View style={styles.brandTextWrap}>
+              <Text style={styles.brandTitleText}>மணமாலை</Text>
+              <Text style={styles.brandSubTitleText}>MY ACCOUNT</Text>
             </View>
           </View>
-        )}
 
-        {/* Membership Subscription Card */}
+          <View style={styles.topBarActions}>
+            <TouchableOpacity style={styles.langSwitchPill} onPress={onToggleLanguage} activeOpacity={0.8}>
+              <Text style={styles.langPillText}>{isTa ? 'English' : 'தமிழ்'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.bellBtn} onPress={onNotificationPress} activeOpacity={0.8}>
+              <CustomIcon name="bell" size={19} color="#1C1614" />
+              {unreadCount > 0 && <View style={styles.bellBadgeDot} />}
+            </TouchableOpacity>
+
+            <View style={styles.avatarWrap}>
+              <Image
+                source={{
+                  uri:
+                    myProfile?.photos?.[0] ||
+                    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+                }}
+                style={styles.avatarImage}
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* User Greeting & Badges Inside Header */}
+        <View style={styles.userSummaryHeaderRow}>
+          <Image
+            source={{
+              uri:
+                myProfile?.photos?.[0] ||
+                'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+            }}
+            style={styles.largeHeaderAvatar}
+          />
+          <View style={{ flex: 1, marginLeft: 14 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={styles.headerUserName} numberOfLines={1}>{myProfile?.name || 'Karthik'}</Text>
+              <View style={styles.verifiedDot} />
+            </View>
+            <Text style={styles.headerUserId}>ID: {myProfile?.matrimonyId || 'MM-2026-8821'}</Text>
+            <View style={styles.headerBadgesRow}>
+              <View style={styles.goldBadge}>
+                <Text style={styles.goldBadgeText}>👑 {currentUser?.membershipTier.toUpperCase()} MEMBER</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Floating White Metric Card */}
+        <View style={styles.metricCard}>
+          <View style={styles.metricCardHeader}>
+            <Text style={styles.metricCardSubhead}>
+              {isTa ? 'சுயவிவரம் & உறுப்பினர் நிலவரம்' : 'Account Health & Quotas'}
+            </Text>
+            <TouchableOpacity onPress={onEditProfile} activeOpacity={0.7}>
+              <Text style={styles.editLinkText}>{isTa ? 'திருத்து' : 'Edit'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.gaugesRow}>
+            <RingGauge value={completeness} max={100} label={`${completeness}%`} unit={isTa ? 'நிறைவு' : 'COMPLETION'} color="#E5A914" />
+            <View style={styles.gaugeDivider} />
+            <RingGauge value={currentUser?.contactsViewedRemaining || 42} max={50} label={`${currentUser?.contactsViewedRemaining || 42}`} unit={isTa ? 'தொடர்புகள்' : 'CONTACTS'} color="#6A7A14" />
+            <View style={styles.gaugeDivider} />
+            <RingGauge value={currentUser?.interestsRemaining || 98} max={100} label={`${currentUser?.interestsRemaining || 98}`} unit={isTa ? 'விருப்பங்கள்' : 'INTERESTS'} color="#D17575" />
+          </View>
+        </View>
+      </View>
+
+      {/* ── 2. BODY CONTENT ──────────────────────────────────────────────── */}
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 90 }]} showsVerticalScrollIndicator={false}>
+        {/* Quick Action Buttons */}
+        <View style={styles.actionBtnRow}>
+          <TouchableOpacity
+            style={styles.previewBtn}
+            onPress={() => myProfile && onViewMyProfile(myProfile)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.previewBtnText}>{isTa ? 'சுயவிவரப் பார்வை' : 'Preview Profile'}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.editProfileBtn} onPress={onEditProfile} activeOpacity={0.88}>
+            <Text style={styles.editProfileBtnText}>{isTa ? 'விவரங்களை மாற்று' : 'Edit Details'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Deep Obsidian Membership Card (#1A1C1E) */}
         <TouchableOpacity
-          style={styles.membershipCard}
+          style={styles.obsidianCard}
           onPress={onMembershipPress}
           activeOpacity={0.9}
         >
-          <View style={styles.membershipIconWrap}>
-            <CustomIcon name="crown" size={24} color={Colors.premiumGold} />
-          </View>
-
-          <View style={{ flex: 1 }}>
-            <View style={styles.membershipRow}>
-              <Text style={styles.membershipTitle}>
-                {currentUser?.membershipTier.toUpperCase()} Kalyanam
-              </Text>
-              <View style={styles.upgradeChip}>
-                <Text style={styles.upgradeChipText}>UPGRADE</Text>
-              </View>
+          <View style={styles.obsidianTopRow}>
+            <View style={styles.obsidianCrownIcon}>
+              <CustomIcon name="crown" size={20} color={PALETTE.amberHeader} />
             </View>
-            <Text style={styles.membershipSub}>
-              {currentUser?.contactsViewedRemaining} phone unlocks & {currentUser?.interestsRemaining} interests remaining
-            </Text>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <View style={styles.membershipRow}>
+                <Text style={styles.membershipTitle}>{currentUser?.membershipTier.toUpperCase()} KALYANAM</Text>
+                <View style={styles.upgradeBadge}>
+                  <Text style={styles.upgradeBadgeText}>UPGRADE</Text>
+                </View>
+              </View>
+              <Text style={styles.membershipSubText}>
+                {currentUser?.contactsViewedRemaining} phone unlocks & {currentUser?.interestsRemaining} interests remaining
+              </Text>
+            </View>
           </View>
         </TouchableOpacity>
 
-        {/* Candidate Privacy Settings */}
+        {/* Assisted Matchmaking & Operations Suite */}
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Privacy & Protection</Text>
+          <Text style={styles.sectionHeaderTitle}>
+            {isTa ? 'உதவி பெற்ற வரன் தேடல் & செயல்பாடுகள்' : 'Assisted Matchmaking & Operations'}
+          </Text>
+
+          {/* 1. Family Decision Circle */}
+          <TouchableOpacity style={styles.rowItem} onPress={onFamilyCirclePress} activeOpacity={0.8}>
+            <View style={[styles.rowIconWrap, { backgroundColor: '#EEF0D6' }]}>
+              <CustomIcon name="crown" size={17} color="#6A7513" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>{isTa ? 'குடும்ப முடிவுக் குழு' : 'Family Decision Circle'}</Text>
+              <Text style={styles.rowSub}>
+                {isTa ? 'குடும்பத்தினர் இணைந்து வரன் ஆய்வு & வாட்ஸ்அப் பகிர்வு' : 'Collaborative family voting & WhatsApp sharing'}
+              </Text>
+            </View>
+            <CustomIcon name="chevron-right" size={16} color={PALETTE.textMuted} />
+          </TouchableOpacity>
+
+          <View style={styles.rowDivider} />
+
+          {/* 2. Relationship Manager */}
+          <TouchableOpacity style={styles.rowItem} onPress={onRelationshipManagerPress} activeOpacity={0.8}>
+            <View style={[styles.rowIconWrap, { backgroundColor: '#FCE6BE' }]}>
+              <CustomIcon name="star" size={17} color="#9E6E00" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>{isTa ? 'அர்ப்பணிப்பு உறவு மேலாளர்' : 'Relationship Manager Portal'}</Text>
+              <Text style={styles.rowSub}>
+                {isTa ? 'ஸ்ரீமதி மீனாட்சி • தனிப்பட்ட முறையில் தேர்ந்தெடுக்கப்பட்ட வரன்கள்' : 'Smt. Meenakshi • Curated varans & meeting tracker'}
+              </Text>
+            </View>
+            <CustomIcon name="chevron-right" size={16} color={PALETTE.textMuted} />
+          </TouchableOpacity>
+
+          <View style={styles.rowDivider} />
+
+          {/* 3. Operations & Commissions */}
+          <TouchableOpacity style={styles.rowItem} onPress={onOperationsPress} activeOpacity={0.8}>
+            <View style={[styles.rowIconWrap, { backgroundColor: '#F5ECE3' }]}>
+              <CustomIcon name="briefcase" size={17} color={PALETTE.maroon} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>{isTa ? 'கிளை & முகவர் கமிஷன் போர்டல்' : 'Agent, Branch & Referral Operations'}</Text>
+              <Text style={styles.rowSub}>
+                {isTa ? '5 தமிழ்நாடு கிளைகள் • 20% முகவர் கமிஷன் & பரிந்துரை அறிக்கை' : '5 TN branches • 20% agent commission tracking'}
+              </Text>
+            </View>
+            <CustomIcon name="chevron-right" size={16} color={PALETTE.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Privacy & Protection Settings */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionHeaderTitle}>{isTa ? 'தனியுரிமை & பாதுகாப்பு' : 'Privacy & Protection'}</Text>
 
           <View style={styles.settingRow}>
-            <View style={{ flex: 1, marginRight: Spacing.md }}>
+            <View style={{ flex: 1, marginRight: 12 }}>
               <Text style={styles.settingLabel}>{t.hidePhone}</Text>
-              <Text style={styles.settingSub}>
-                Prevent public display of your phone number until mutual interest is accepted
-              </Text>
+              <Text style={styles.settingSub}>Prevent public display of your phone until interest is accepted</Text>
             </View>
             <Switch
               value={hidePhone}
               onValueChange={handleToggleHidePhone}
-              trackColor={{ false: Colors.sand, true: Colors.burgundy }}
-              thumbColor={Colors.creme}
+              trackColor={{ false: '#E6E2CF', true: PALETTE.maroon }}
+              thumbColor="#FFFFFF"
             />
           </View>
 
+          <View style={styles.rowDivider} />
+
           <View style={styles.settingRow}>
-            <View style={{ flex: 1, marginRight: Spacing.md }}>
+            <View style={{ flex: 1, marginRight: 12 }}>
               <Text style={styles.settingLabel}>{t.hideHoroscope}</Text>
-              <Text style={styles.settingSub}>
-                Share detailed Jathagam birth coordinates only upon explicit request
-              </Text>
+              <Text style={styles.settingSub}>Share detailed Jathagam coordinates only upon explicit request</Text>
             </View>
             <Switch
               value={hideHoroscope}
               onValueChange={handleToggleHideHoroscope}
-              trackColor={{ false: Colors.sand, true: Colors.burgundy }}
-              thumbColor={Colors.creme}
+              trackColor={{ false: '#E6E2CF', true: PALETTE.maroon }}
+              thumbColor="#FFFFFF"
             />
           </View>
         </View>
 
-        {/* Administration & Role Mode */}
+        {/* Admin Center & Logout */}
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Admin & Moderation</Text>
-          <TouchableOpacity
-            style={styles.adminActionRow}
-            onPress={onAdminPress}
-            activeOpacity={0.8}
-          >
-            <View style={styles.adminIconBox}>
-              <CustomIcon name="admin" size={18} color={Colors.maroon} />
+          <TouchableOpacity style={styles.rowItem} onPress={onAdminPress} activeOpacity={0.8}>
+            <View style={[styles.rowIconWrap, { backgroundColor: '#FCEAEA' }]}>
+              <CustomIcon name="admin" size={17} color={PALETTE.maroon} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.adminTitle}>Admin Command Center</Text>
-              <Text style={styles.adminSub}>
-                Moderate Tamil member verifications, view stats & reports
-              </Text>
+              <Text style={styles.rowTitle}>Admin Command Center</Text>
+              <Text style={styles.rowSub}>Switch to moderator & operations console</Text>
             </View>
-            <CustomIcon name="chevron-right" size={18} color={Colors.textMuted} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Quick Demo Profile Switcher */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Switch Active Candidate Profile</Text>
-          <View style={styles.switcherRow}>
-            <TouchableOpacity
-              style={[
-                styles.switcherPill,
-                currentUser?.activeProfileId === 'mm-g-01' && styles.switcherPillActive,
-              ]}
-              onPress={() => handleSwitchAccount('mm-g-01')}
-            >
-              <Text
-                style={[
-                  styles.switcherText,
-                  currentUser?.activeProfileId === 'mm-g-01' && styles.switcherTextActive,
-                ]}
-              >
-                Groom: Karthik
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.switcherPill,
-                currentUser?.activeProfileId === 'mm-b-01' && styles.switcherPillActive,
-              ]}
-              onPress={() => handleSwitchAccount('mm-b-01')}
-            >
-              <Text
-                style={[
-                  styles.switcherText,
-                  currentUser?.activeProfileId === 'mm-b-01' && styles.switcherTextActive,
-                ]}
-              >
-                Bride: Soundarya MD
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Language Selection */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Language / மொழி</Text>
-          <View style={styles.langRow}>
-            <TouchableOpacity
-              style={[styles.langChip, language === 'ta' && styles.langChipActive]}
-              onPress={onToggleLanguage}
-            >
-              <Text style={[styles.langChipText, language === 'ta' && styles.langChipTextActive]}>
-                தமிழ் (Tamil)
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.langChip, language === 'en' && styles.langChipActive]}
-              onPress={onToggleLanguage}
-            >
-              <Text style={[styles.langChipText, language === 'en' && styles.langChipTextActive]}>
-                English
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Logout & Account Deletion */}
-        <View style={styles.accountActions}>
-          <TouchableOpacity style={styles.logoutBtn} onPress={onLogout} activeOpacity={0.8}>
-            <Text style={styles.logoutText}>{t.logout}</Text>
+            <CustomIcon name="chevron-right" size={16} color={PALETTE.textMuted} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.deleteBtn} onPress={handleDeleteAccount} activeOpacity={0.8}>
-            <Text style={styles.deleteText}>Delete Account Permanently</Text>
+          <View style={styles.rowDivider} />
+
+          <TouchableOpacity style={styles.logoutBtn} onPress={onLogout} activeOpacity={0.85}>
+            <Text style={styles.logoutBtnText}>{isTa ? 'வெளியேறு' : 'Log Out'}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -361,306 +421,368 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   );
 };
 
+/* ─── Stylesheet ───────────────────────────────────────────────────────────── */
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: Colors.creme,
+    backgroundColor: PALETTE.pageBg,
   },
-  scrollContent: {
-    padding: Spacing.md,
-    paddingBottom: 60,
+  amberHeaderZone: {
+    backgroundColor: PALETTE.amberHeader,
+    paddingHorizontal: 20,
+    paddingBottom: 22,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    shadowColor: '#8C6700',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 8,
   },
-  profileHeaderCard: {
-    backgroundColor: '#FFFFFF',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: Colors.sand,
-    marginBottom: Spacing.md,
-    ...Shadows.editorial,
-  },
-  avatarRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: Colors.sandLight,
-  },
-  nameRow: {
+  topBarRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-  },
-  profileName: {
-    fontFamily: Typography.fontSerif,
-    fontSize: Typography.titleMedium,
-    fontWeight: '700',
-    color: Colors.burgundy,
-    flex: 1,
-  },
-  matrimonyIdText: {
-    fontSize: Typography.caption,
-    fontWeight: '700',
-    color: Colors.burgundy,
-    marginTop: 2,
-  },
-  detailText: {
-    fontSize: Typography.caption,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  locationText: {
-    fontSize: Typography.caption,
-    color: Colors.textMuted,
-    marginTop: 1,
-  },
-  completenessWrap: {
-    marginTop: Spacing.md,
-    paddingTop: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.sandLight,
-  },
-  completenessHeader: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 16,
   },
-  completenessLabel: {
-    fontSize: Typography.caption,
-    color: Colors.textSecondary,
-    fontWeight: '600',
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
-  completenessVal: {
-    fontSize: Typography.caption,
+  brandLogoCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#1C1614',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandTextWrap: {
+    flexDirection: 'column',
+  },
+  brandTitleText: {
+    fontSize: 19,
+    fontWeight: '800',
+    color: '#1C1614',
+    letterSpacing: 0.3,
+  },
+  brandSubTitleText: {
+    fontSize: 9.5,
     fontWeight: '700',
-    color: Colors.burgundy,
+    color: 'rgba(28, 22, 20, 0.72)',
+    letterSpacing: 1.2,
   },
-  barTrack: {
-    height: 6,
-    backgroundColor: Colors.sandLight,
-    borderRadius: 3,
+  topBarActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  langSwitchPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.65)',
+  },
+  langPillText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#1C1614',
+  },
+  bellBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.65)',
+  },
+  bellBadgeDot: {
+    position: 'absolute',
+    top: 7,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: PALETTE.redDot,
+  },
+  avatarWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
     overflow: 'hidden',
   },
-  barFill: {
+  avatarImage: {
+    width: '100%',
     height: '100%',
-    backgroundColor: Colors.burgundy,
   },
-  headerBtnRow: {
+  userSummaryHeaderRow: {
     flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  largeHeaderAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 2.5,
+    borderColor: '#FFFFFF',
+  },
+  headerUserName: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1C1614',
+  },
+  verifiedDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#6A7A14',
+  },
+  headerUserId: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: 'rgba(28, 22, 20, 0.72)',
+    marginTop: 1,
+  },
+  headerBadgesRow: {
+    flexDirection: 'row',
+    marginTop: 6,
+  },
+  goldBadge: {
+    backgroundColor: '#1C1614',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  goldBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: PALETTE.amberHeader,
+    letterSpacing: 0.5,
+  },
+  metricCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    shadowColor: '#3A271D',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+  metricCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  metricCardSubhead: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: PALETTE.textMuted,
+  },
+  editLinkText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: PALETTE.amberHeaderDark,
+  },
+  gaugesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  gaugeContainer: {
+    alignItems: 'center',
+  },
+  gaugeValueText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#1C1614',
+  },
+  gaugeUnitText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: PALETTE.textMuted,
+    marginTop: 4,
+    letterSpacing: 0.3,
+  },
+  gaugeDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: '#F0ECE3',
+  },
+  scrollContent: {
+    paddingHorizontal: 18,
+    paddingTop: 18,
+  },
+  actionBtnRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 14,
   },
   previewBtn: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1.2,
-    borderColor: Colors.burgundy,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: PALETTE.cardBorder,
     alignItems: 'center',
-    backgroundColor: Colors.creme,
+    justifyContent: 'center',
   },
   previewBtnText: {
-    fontSize: Typography.bodySmall,
+    fontSize: 13,
     fontWeight: '700',
-    color: Colors.burgundy,
+    color: PALETTE.textInk,
   },
-  editBtn: {
+  editProfileBtn: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.burgundy,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: PALETTE.amberHeader,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  editBtnText: {
-    fontSize: Typography.bodySmall,
-    fontWeight: '700',
-    color: Colors.creme,
+  editProfileBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#1C1614',
   },
-  membershipCard: {
+  obsidianCard: {
+    backgroundColor: PALETTE.obsidianCard,
+    borderRadius: 22,
+    padding: 16,
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  obsidianTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.dustyPinkLight,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: Colors.dustyPink,
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-    ...Shadows.editorial,
   },
-  membershipIconWrap: {
+  obsidianCrownIcon: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.creme,
+    backgroundColor: 'rgba(247, 191, 42, 0.14)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   membershipRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 3,
   },
   membershipTitle: {
-    fontFamily: Typography.fontSerif,
-    fontSize: Typography.bodyLarge,
-    fontWeight: '700',
-    color: Colors.burgundy,
-  },
-  upgradeChip: {
-    backgroundColor: Colors.burgundy,
-    paddingHorizontal: 8,
-    paddingVertical: 2.5,
-    borderRadius: BorderRadius.sm,
-  },
-  upgradeChipText: {
-    fontSize: 9,
+    fontSize: 14,
     fontWeight: '800',
-    color: Colors.creme,
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
-  membershipSub: {
-    fontSize: Typography.caption,
-    color: Colors.textSecondary,
-    marginTop: 3,
+  upgradeBadge: {
+    backgroundColor: PALETTE.amberHeader,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  upgradeBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#1C1614',
+  },
+  membershipSubText: {
+    fontSize: 11,
+    color: '#9BA1AB',
   },
   sectionCard: {
     backgroundColor: '#FFFFFF',
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
+    borderRadius: 22,
+    padding: 16,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: Colors.sand,
-    marginBottom: Spacing.md,
-    ...Shadows.subtle,
+    borderColor: PALETTE.cardBorder,
+    shadowColor: '#3A271D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  sectionTitle: {
-    fontFamily: Typography.fontSerif,
-    fontSize: Typography.bodyRegular,
+  sectionHeaderTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: PALETTE.textInk,
+    marginBottom: 14,
+    letterSpacing: 0.3,
+  },
+  rowItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  rowIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  rowTitle: {
+    fontSize: 13.5,
     fontWeight: '700',
-    color: Colors.burgundy,
-    marginBottom: Spacing.sm,
+    color: PALETTE.textInk,
+    marginBottom: 2,
+  },
+  rowSub: {
+    fontSize: 11,
+    color: PALETTE.textMuted,
+  },
+  rowDivider: {
+    height: 1,
+    backgroundColor: '#F5EFE6',
+    marginVertical: 6,
   },
   settingRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 9,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.sandLight,
+    justifyContent: 'space-between',
+    paddingVertical: 8,
   },
   settingLabel: {
-    fontSize: Typography.bodySmall,
-    fontWeight: '600',
-    color: Colors.textPrimary,
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: PALETTE.textInk,
+    marginBottom: 2,
   },
   settingSub: {
-    fontSize: Typography.caption,
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-  adminActionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingVertical: 4,
-  },
-  adminIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.sandLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  adminTitle: {
-    fontSize: Typography.bodySmall,
-    fontWeight: '700',
-    color: Colors.burgundy,
-  },
-  adminSub: {
-    fontSize: Typography.caption,
-    color: Colors.textMuted,
-    marginTop: 1,
-  },
-  switcherRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  switcherPill: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.sand,
-    backgroundColor: Colors.sandLight,
-    alignItems: 'center',
-  },
-  switcherPillActive: {
-    backgroundColor: Colors.burgundy,
-    borderColor: Colors.burgundy,
-  },
-  switcherText: {
-    fontSize: Typography.caption,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  switcherTextActive: {
-    color: Colors.creme,
-    fontWeight: '700',
-  },
-  langRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  langChip: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.sand,
-    backgroundColor: Colors.sandLight,
-    alignItems: 'center',
-  },
-  langChipActive: {
-    backgroundColor: Colors.burgundy,
-    borderColor: Colors.burgundy,
-  },
-  langChipText: {
-    fontSize: Typography.bodySmall,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  langChipTextActive: {
-    color: Colors.creme,
-    fontWeight: '700',
-  },
-  accountActions: {
-    gap: Spacing.sm,
-    marginTop: Spacing.sm,
+    fontSize: 11,
+    color: PALETTE.textMuted,
+    lineHeight: 15,
   },
   logoutBtn: {
-    backgroundColor: Colors.creme,
-    borderWidth: 1.2,
-    borderColor: Colors.burgundy,
-    paddingVertical: 12,
-    borderRadius: BorderRadius.md,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#FCEAEA',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
   },
-  logoutText: {
-    fontSize: Typography.bodyRegular,
-    fontWeight: '700',
-    color: Colors.burgundy,
-  },
-  deleteBtn: {
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  deleteText: {
-    fontSize: Typography.caption,
-    color: Colors.danger,
-    textDecorationLine: 'underline',
+  logoutBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: PALETTE.rose,
   },
 });

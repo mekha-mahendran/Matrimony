@@ -779,17 +779,12 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
   const [heightModalVisible, setHeightModalVisible] = useState(false);
 
   // Physical Status
-  const [physicalStatus, setPhysicalStatus] = useState<PhysicalStatus | null>(null);
+  const [physicalStatus, setPhysicalStatus] = useState<PhysicalStatus | null>('normal');
 
   // Marital Status
-  const [maritalStatus, setMaritalStatus] = useState<MaritalStatus | null>(null);
+  const [maritalStatus, setMaritalStatus] = useState<MaritalStatus | null>('never_married');
 
-  // Progressive Disclosure Visibility Checks
-  const isDobVisible = gender !== null;
   const isDobComplete = Boolean(selectedDay && selectedMonth && selectedYear);
-  const isHeightVisible = isDobComplete;
-  const isPhysicalStatusVisible = Boolean(selectedHeight);
-  const isMaritalStatusVisible = Boolean(physicalStatus);
   const isStep1Complete = Boolean(
     gender && isDobComplete && selectedHeight && physicalStatus && maritalStatus
   );
@@ -1205,7 +1200,7 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
       <ScrollView
         contentContainerStyle={[
           styles.scrollBody,
-          { paddingBottom: bottomInset + 30 },
+          { paddingBottom: bottomInset + 16 },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -1275,231 +1270,223 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
               </View>
             </View>
 
-            {/* 2. DATE OF BIRTH - Appears when Gender is selected */}
-            {isDobVisible && (
-              <View style={styles.questionSection}>
-                <Text style={styles.questionTitle}>
-                  {t.dateOfBirthTitle || (isTa ? 'பிறந்த தேதி' : 'Date of birth')}
-                </Text>
-                <View style={styles.dobRow}>
-                  {/* Day Button */}
-                  <TouchableOpacity
-                    style={[
-                      styles.dobDropdownBtn,
-                      selectedDay ? styles.dobDropdownBtnActive : null,
-                    ]}
-                    onPress={() => setDayModalVisible(true)}
-                    activeOpacity={0.8}
-                  >
-                    <Text
-                      style={[
-                        styles.dobDropdownText,
-                        selectedDay ? styles.dobDropdownTextActive : null,
-                      ]}
-                    >
-                      {selectedDay || (isTa ? 'நாள்' : 'Day')}
-                    </Text>
-                    <Text style={styles.dropdownChevron}>∨</Text>
-                  </TouchableOpacity>
-
-                  {/* Month Button */}
-                  <TouchableOpacity
-                    style={[
-                      styles.dobDropdownBtn,
-                      selectedMonth ? styles.dobDropdownBtnActive : null,
-                    ]}
-                    onPress={() => setMonthModalVisible(true)}
-                    activeOpacity={0.8}
-                  >
-                    <Text
-                      style={[
-                        styles.dobDropdownText,
-                        selectedMonth ? styles.dobDropdownTextActive : null,
-                      ]}
-                    >
-                      {selectedMonth
-                        ? (isTa
-                            ? MONTHS_DATA.find(m => m.val === selectedMonth)?.ta
-                            : MONTHS_DATA.find(m => m.val === selectedMonth)?.en)
-                        : (isTa ? 'மாதம்' : 'Month')}
-                    </Text>
-                    <Text style={styles.dropdownChevron}>∨</Text>
-                  </TouchableOpacity>
-
-                  {/* Year Button */}
-                  <TouchableOpacity
-                    style={[
-                      styles.dobDropdownBtn,
-                      selectedYear ? styles.dobDropdownBtnActive : null,
-                    ]}
-                    onPress={() => setYearModalVisible(true)}
-                    activeOpacity={0.8}
-                  >
-                    <Text
-                      style={[
-                        styles.dobDropdownText,
-                        selectedYear ? styles.dobDropdownTextActive : null,
-                      ]}
-                    >
-                      {selectedYear || (isTa ? 'ஆண்டு' : 'Year')}
-                    </Text>
-                    <Text style={styles.dropdownChevron}>∨</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
-            {/* 3. HEIGHT - Appears when Date of Birth is selected */}
-            {isHeightVisible && (
-              <View style={styles.questionSection}>
-                <Text style={styles.questionTitle}>
-                  {t.heightLabel || (isTa ? 'உயரம்' : 'Height')}
-                </Text>
+            {/* 2. DATE OF BIRTH */}
+            <View style={styles.questionSection}>
+              <Text style={styles.questionTitle}>
+                {t.dateOfBirthTitle || (isTa ? 'பிறந்த தேதி' : 'Date of birth')}
+              </Text>
+              <View style={styles.dobRow}>
+                {/* Day Button */}
                 <TouchableOpacity
                   style={[
-                    styles.heightDropdownBtn,
-                    selectedHeight ? styles.heightDropdownBtnActive : null,
+                    styles.dobDropdownBtn,
+                    selectedDay ? styles.dobDropdownBtnActive : null,
                   ]}
-                  onPress={() => setHeightModalVisible(true)}
+                  onPress={() => setDayModalVisible(true)}
                   activeOpacity={0.8}
                 >
                   <Text
                     style={[
-                      styles.heightDropdownText,
-                      selectedHeight ? styles.heightDropdownTextActive : null,
+                      styles.dobDropdownText,
+                      selectedDay ? styles.dobDropdownTextActive : null,
                     ]}
                   >
-                    {selectedHeight
-                      ? selectedHeight.label
-                      : (t.selectYourHeightPlaceholder || (isTa ? 'உங்கள் உயரத்தை தேர்வு செய்க' : 'Select your height'))}
+                    {selectedDay || (isTa ? 'நாள்' : 'Day')}
+                  </Text>
+                  <Text style={styles.dropdownChevron}>∨</Text>
+                </TouchableOpacity>
+
+                {/* Month Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.dobDropdownBtn,
+                    selectedMonth ? styles.dobDropdownBtnActive : null,
+                  ]}
+                  onPress={() => setMonthModalVisible(true)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.dobDropdownText,
+                      selectedMonth ? styles.dobDropdownTextActive : null,
+                    ]}
+                  >
+                    {selectedMonth
+                      ? (isTa
+                          ? MONTHS_DATA.find(m => m.val === selectedMonth)?.ta
+                          : MONTHS_DATA.find(m => m.val === selectedMonth)?.en)
+                      : (isTa ? 'மாதம்' : 'Month')}
+                  </Text>
+                  <Text style={styles.dropdownChevron}>∨</Text>
+                </TouchableOpacity>
+
+                {/* Year Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.dobDropdownBtn,
+                    selectedYear ? styles.dobDropdownBtnActive : null,
+                  ]}
+                  onPress={() => setYearModalVisible(true)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.dobDropdownText,
+                      selectedYear ? styles.dobDropdownTextActive : null,
+                    ]}
+                  >
+                    {selectedYear || (isTa ? 'ஆண்டு' : 'Year')}
                   </Text>
                   <Text style={styles.dropdownChevron}>∨</Text>
                 </TouchableOpacity>
               </View>
-            )}
+            </View>
 
-            {/* 4. PHYSICAL STATUS - Appears when Height is selected */}
-            {isPhysicalStatusVisible && (
-              <View style={styles.questionSection}>
-                <Text style={styles.questionTitle}>
-                  {t.physicalStatusTitle || (isTa ? 'உடல் நிலை' : 'Physical status')}
+            {/* 3. HEIGHT */}
+            <View style={styles.questionSection}>
+              <Text style={styles.questionTitle}>
+                {t.heightLabel || (isTa ? 'உயரம்' : 'Height')}
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.heightDropdownBtn,
+                  selectedHeight ? styles.heightDropdownBtnActive : null,
+                ]}
+                onPress={() => setHeightModalVisible(true)}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.heightDropdownText,
+                    selectedHeight ? styles.heightDropdownTextActive : null,
+                  ]}
+                >
+                  {selectedHeight
+                    ? selectedHeight.label
+                    : (t.selectYourHeightPlaceholder || (isTa ? 'உங்கள் உயரத்தை தேர்வு செய்க' : 'Select your height'))}
                 </Text>
-                <View style={styles.pillsRowWrap}>
-                  {/* Normal */}
-                  <TouchableOpacity
-                    style={[
-                      styles.pill,
-                      physicalStatus === 'normal' && styles.pillSelected,
-                    ]}
-                    onPress={() => setPhysicalStatus('normal')}
-                    activeOpacity={0.8}
-                  >
-                    {physicalStatus === 'normal' ? (
-                      <View style={styles.pillCheckCircle}>
-                        <Text style={styles.pillCheckIcon}>✓</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.pillRadioCircle} />
-                    )}
-                    <Text
-                      style={[
-                        styles.pillText,
-                        physicalStatus === 'normal' && styles.pillTextSelected,
-                      ]}
-                    >
-                      {t.statusNormal || (isTa ? 'இயல்பானது' : 'Normal')}
-                    </Text>
-                  </TouchableOpacity>
+                <Text style={styles.dropdownChevron}>∨</Text>
+              </TouchableOpacity>
+            </View>
 
-                  {/* Physically Challenged */}
-                  <TouchableOpacity
+            {/* 4. PHYSICAL STATUS */}
+            <View style={styles.questionSection}>
+              <Text style={styles.questionTitle}>
+                {t.physicalStatusTitle || (isTa ? 'உடல் நிலை' : 'Physical status')}
+              </Text>
+              <View style={styles.pillsRowWrap}>
+                {/* Normal */}
+                <TouchableOpacity
+                  style={[
+                    styles.pill,
+                    physicalStatus === 'normal' && styles.pillSelected,
+                  ]}
+                  onPress={() => setPhysicalStatus('normal')}
+                  activeOpacity={0.8}
+                >
+                  {physicalStatus === 'normal' ? (
+                    <View style={styles.pillCheckCircle}>
+                      <Text style={styles.pillCheckIcon}>✓</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.pillRadioCircle} />
+                  )}
+                  <Text
                     style={[
-                      styles.pill,
-                      physicalStatus === 'physically_challenged' && styles.pillSelected,
+                      styles.pillText,
+                      physicalStatus === 'normal' && styles.pillTextSelected,
                     ]}
-                    onPress={() => setPhysicalStatus('physically_challenged')}
-                    activeOpacity={0.8}
                   >
-                    {physicalStatus === 'physically_challenged' ? (
-                      <View style={styles.pillCheckCircle}>
-                        <Text style={styles.pillCheckIcon}>✓</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.pillRadioCircle} />
-                    )}
-                    <Text
-                      style={[
-                        styles.pillText,
-                        physicalStatus === 'physically_challenged' && styles.pillTextSelected,
-                      ]}
-                    >
-                      {t.statusPhysicallyChallenged || (isTa ? 'மாற்றுத்திறனாளி' : 'Physically Challenged')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                    {t.statusNormal || (isTa ? 'இயல்பானது' : 'Normal')}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Physically Challenged */}
+                <TouchableOpacity
+                  style={[
+                    styles.pill,
+                    physicalStatus === 'physically_challenged' && styles.pillSelected,
+                  ]}
+                  onPress={() => setPhysicalStatus('physically_challenged')}
+                  activeOpacity={0.8}
+                >
+                  {physicalStatus === 'physically_challenged' ? (
+                    <View style={styles.pillCheckCircle}>
+                      <Text style={styles.pillCheckIcon}>✓</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.pillRadioCircle} />
+                  )}
+                  <Text
+                    style={[
+                      styles.pillText,
+                      physicalStatus === 'physically_challenged' && styles.pillTextSelected,
+                    ]}
+                  >
+                    {t.statusPhysicallyChallenged || (isTa ? 'மாற்றுத்திறனாளி' : 'Physically Challenged')}
+                  </Text>
+                </TouchableOpacity>
               </View>
-            )}
+            </View>
 
-            {/* 5. MARITAL STATUS - Appears when Physical Status is selected */}
-            {isMaritalStatusVisible && (
-              <View style={styles.questionSection}>
-                <Text style={styles.questionTitle}>
-                  {t.maritalStatusTitle || (isTa ? 'திருமண நிலை' : 'Marital status')}
-                </Text>
-                <View style={styles.pillsRowWrap}>
-                  {[
-                    {
-                      id: 'never_married' as MaritalStatus,
-                      label: t.neverMarriedOption || (isTa ? 'மணமாகாதவர்' : 'Never Married'),
-                    },
-                    {
-                      id: 'widow' as MaritalStatus,
-                      label: t.widowOption || (isTa ? 'விதவை / விதவையர்' : 'Widow'),
-                    },
-                    {
-                      id: 'awaiting_divorce' as MaritalStatus,
-                      label: t.awaitingDivorceOption || (isTa ? 'விவாகரத்து எதிர்பார்ப்பவர்' : 'Awaiting Divorce'),
-                    },
-                    {
-                      id: 'divorced' as MaritalStatus,
-                      label: t.divorcedOption || (isTa ? 'விவாகரத்தானவர்' : 'Divorced'),
-                    },
-                  ].map(item => {
-                    const active = maritalStatus === item.id;
-                    return (
-                      <TouchableOpacity
-                        key={item.id}
+            {/* 5. MARITAL STATUS */}
+            <View style={styles.questionSection}>
+              <Text style={styles.questionTitle}>
+                {t.maritalStatusTitle || (isTa ? 'திருமண நிலை' : 'Marital status')}
+              </Text>
+              <View style={styles.pillsRowWrap}>
+                {[
+                  {
+                    id: 'never_married' as MaritalStatus,
+                    label: t.neverMarriedOption || (isTa ? 'மணமாகாதவர்' : 'Never Married'),
+                  },
+                  {
+                    id: 'widow' as MaritalStatus,
+                    label: t.widowOption || (isTa ? 'விதவை / விதவையர்' : 'Widow'),
+                  },
+                  {
+                    id: 'awaiting_divorce' as MaritalStatus,
+                    label: t.awaitingDivorceOption || (isTa ? 'விவாகரத்து எதிர்பார்ப்பவர்' : 'Awaiting Divorce'),
+                  },
+                  {
+                    id: 'divorced' as MaritalStatus,
+                    label: t.divorcedOption || (isTa ? 'விவாகரத்தானவர்' : 'Divorced'),
+                  },
+                ].map(item => {
+                  const active = maritalStatus === item.id;
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[
+                        styles.pill,
+                        active && styles.pillSelected,
+                      ]}
+                      onPress={() => setMaritalStatus(item.id)}
+                      activeOpacity={0.8}
+                    >
+                      {active ? (
+                        <View style={styles.pillCheckCircle}>
+                          <Text style={styles.pillCheckIcon}>✓</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.pillRadioCircle} />
+                      )}
+                      <Text
                         style={[
-                          styles.pill,
-                          active && styles.pillSelected,
+                          styles.pillText,
+                          active && styles.pillTextSelected,
                         ]}
-                        onPress={() => setMaritalStatus(item.id)}
-                        activeOpacity={0.8}
                       >
-                        {active ? (
-                          <View style={styles.pillCheckCircle}>
-                            <Text style={styles.pillCheckIcon}>✓</Text>
-                          </View>
-                        ) : (
-                          <View style={styles.pillRadioCircle} />
-                        )}
-                        <Text
-                          style={[
-                            styles.pillText,
-                            active && styles.pillTextSelected,
-                          ]}
-                        >
-                          {item.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
-            )}
+            </View>
 
             {/* Spacing before bottom CTA */}
-            <View style={{ height: 20 }} />
+            <View style={{ height: 6 }} />
 
             {/* CTA Button: Next in Manamaalai Matrimony theme */}
             <TouchableOpacity
@@ -1694,7 +1681,7 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
             )}
 
             {/* Spacing before bottom CTA */}
-            <View style={{ height: 28 }} />
+            <View style={{ height: 14 }} />
 
             {/* CTA Button: Next */}
             <TouchableOpacity
@@ -1938,7 +1925,7 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
 
             {/* Helpline Call Row */}
             <TouchableOpacity
-              style={[styles.helplineRow, { marginTop: 14 }]}
+              style={[styles.helplineRow, { marginTop: 10 }]}
               onPress={handleCallSupport}
               activeOpacity={0.7}
             >
@@ -1989,7 +1976,7 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
               </TouchableOpacity>
             </View>
 
-            <Text style={[styles.fieldLabel, { marginTop: 18 }]}>{t.familyValues}</Text>
+            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>{t.familyValues}</Text>
             <View style={styles.chipRow}>
               {['orthodox', 'traditional', 'moderate', 'liberal'].map(v => {
                 const active = familyValues === v;
@@ -2007,7 +1994,7 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
               })}
             </View>
 
-            <Text style={[styles.fieldLabel, { marginTop: 18 }]}>{t.fatherOccupation}</Text>
+            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>{t.fatherOccupation}</Text>
             <TextInput
               style={styles.textInput}
               placeholder="e.g. Business, Govt Officer, Retired..."
@@ -2015,7 +2002,7 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
               onChangeText={setFatherOccupation}
             />
 
-            <Text style={[styles.fieldLabel, { marginTop: 18 }]}>{t.motherOccupation}</Text>
+            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>{t.motherOccupation}</Text>
             <TextInput
               style={styles.textInput}
               placeholder="e.g. Homemaker, Teacher, Professor..."
@@ -2023,7 +2010,7 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
               onChangeText={setMotherOccupation}
             />
 
-            <Text style={[styles.fieldLabel, { marginTop: 18 }]}>{t.siblings}</Text>
+            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>{t.siblings}</Text>
             <TextInput
               style={styles.textInput}
               placeholder="e.g. 1 Elder Sister (Married), 1 Brother"
@@ -2031,7 +2018,7 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
               onChangeText={setSiblings}
             />
 
-            <Text style={[styles.fieldLabel, { marginTop: 18 }]}>{t.nativeDistrict}</Text>
+            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>{t.nativeDistrict}</Text>
             <TextInput
               style={styles.textInput}
               placeholder="e.g. Tirunelveli, Madurai, Thanjavur..."
@@ -2040,7 +2027,7 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
             />
 
             <TouchableOpacity
-              style={styles.primaryNextBtn}
+              style={[styles.primaryNextBtn, { marginTop: 16 }]}
               onPress={handleNextPress}
               activeOpacity={0.88}
             >
@@ -2066,7 +2053,7 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
             </Text>
 
             <Text style={styles.fieldLabel}>{t.rasi}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
               <View style={styles.horizontalChipsRow}>
                 {TAMIL_RASIS.map(r => {
                   const active = rasi === r;
@@ -2084,7 +2071,7 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
             </ScrollView>
 
             <Text style={styles.fieldLabel}>{t.nakshatram}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
               <View style={styles.horizontalChipsRow}>
                 {TAMIL_NAKSHATRAMS.map(n => {
                   const active = nakshatram === n;
@@ -2117,7 +2104,7 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
               <Switch
                 value={chevvaiDosham}
                 onValueChange={setChevvaiDosham}
-                trackColor={{ false: '#E2E8F0', true: Colors.burgundy }}
+                trackColor={{ false: '#E6E2CF', true: Colors.burgundy }}
                 thumbColor="#FFFFFF"
               />
             </View>
@@ -2130,12 +2117,12 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
               <Switch
                 value={sarpaDosham}
                 onValueChange={setSarpaDosham}
-                trackColor={{ false: '#E2E8F0', true: Colors.burgundy }}
+                trackColor={{ false: '#E6E2CF', true: Colors.burgundy }}
                 thumbColor="#FFFFFF"
               />
             </View>
 
-            <Text style={[styles.fieldLabel, { marginTop: 18 }]}>{t.diet}</Text>
+            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>{t.diet}</Text>
             <View style={styles.chipRow}>
               {[
                 { id: 'vegetarian', label: t.vegetarian },
@@ -2157,7 +2144,7 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
               })}
             </View>
 
-            <Text style={[styles.fieldLabel, { marginTop: 18 }]}>{t.aboutMe}</Text>
+            <Text style={[styles.fieldLabel, { marginTop: 12 }]}>{t.aboutMe}</Text>
             <TextInput
               style={[styles.textInput, { height: 90, textAlignVertical: 'top' }]}
               multiline
@@ -2170,7 +2157,7 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
               onChangeText={setAbout}
             />
 
-            <View style={[styles.switchRow, { marginTop: 18 }]}>
+            <View style={[styles.switchRow, { marginTop: 12 }]}>
               <View style={{ flex: 1, paddingRight: 10 }}>
                 <Text style={styles.switchLabel}>{t.hidePhone}</Text>
                 <Text style={styles.switchSub}>
@@ -2182,13 +2169,13 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
               <Switch
                 value={hidePhoneUntilAccepted}
                 onValueChange={setHidePhoneUntilAccepted}
-                trackColor={{ false: '#E2E8F0', true: Colors.burgundy }}
+                trackColor={{ false: '#E6E2CF', true: Colors.burgundy }}
                 thumbColor="#FFFFFF"
               />
             </View>
 
             <TouchableOpacity
-              style={[styles.primaryNextBtn, { marginTop: 24 }]}
+              style={[styles.primaryNextBtn, { marginTop: 16 }]}
               onPress={finalizeProfile}
               activeOpacity={0.88}
             >
@@ -2908,7 +2895,7 @@ export const ProfileWizardScreen: React.FC<ProfileWizardProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.vanilla,
   },
 
   /* Header */
@@ -2917,46 +2904,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
+    paddingBottom: 10,
+    backgroundColor: Colors.vanilla,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'flex-start',
   },
   backArrow: {
-    fontSize: 24,
-    color: '#111827',
+    fontSize: 22,
+    color: Colors.plumBurgundy,
     fontWeight: '600',
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.plumBurgundy,
     flex: 1,
-    marginLeft: 12,
+    marginLeft: 10,
   },
   langBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
+    borderColor: Colors.limeOlive,
+    backgroundColor: Colors.sandLight,
   },
   langGlobe: {
-    fontSize: 13,
-    marginRight: 6,
+    fontSize: 12,
+    marginRight: 5,
   },
   langText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.plumBurgundy,
   },
 
   /* Progress Bar */
@@ -2964,35 +2951,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingBottom: 16,
-    gap: 12,
+    paddingBottom: 8,
+    gap: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: Colors.border,
   },
   track: {
     flex: 1,
-    height: 7,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 4,
+    height: 4,
+    backgroundColor: Colors.border,
+    borderRadius: 2,
     overflow: 'hidden',
   },
   fill: {
     height: '100%',
-    backgroundColor: '#4D0E13', // Auspicious Manamaalai Theme Burgundy
-    borderRadius: 4,
+    backgroundColor: Colors.limeOlive, // Progress indicator in Lime Olive
+    borderRadius: 2,
   },
   percentText: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '700',
-    color: '#374151',
-    minWidth: 34,
+    color: Colors.textSecondary,
+    minWidth: 32,
     textAlign: 'right',
   },
 
   /* Scroll Body */
   scrollBody: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingHorizontal: 16,
+    paddingTop: 10,
   },
 
   /* Step 1 Content */
@@ -3000,72 +2987,72 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   questionSection: {
-    marginBottom: 26,
+    marginBottom: 10,
   },
   questionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 14,
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.plumBurgundy,
+    marginBottom: 6,
   },
 
   /* Pills Row */
   pillsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 8,
   },
   pillsRowWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 6,
   },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-    borderWidth: 1.5,
-    borderColor: '#1F2937',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E2DDD5',
     backgroundColor: '#FFFFFF',
   },
   pillSelected: {
-    backgroundColor: '#4D0E13', // Manamaalai Theme Colour
-    borderColor: '#4D0E13',
-    shadowColor: '#4D0E13',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: Colors.limeOlive, // Selected state in Lime Olive
+    borderColor: Colors.limeOlive,
+    shadowColor: Colors.plumBurgundy,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 2,
+    elevation: 2,
   },
   pillRadioCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1.8,
-    borderColor: '#1F2937',
-    marginRight: 10,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 1.2,
+    borderColor: Colors.limeOlive,
+    marginRight: 6,
     backgroundColor: '#FFFFFF',
   },
   pillCheckCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 6,
   },
   pillCheckIcon: {
-    fontSize: 12,
+    fontSize: 9,
     fontWeight: 'bold',
-    color: '#4D0E13',
+    color: Colors.limeOlive,
   },
   pillText: {
-    fontSize: 15.5,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#231215',
   },
   pillTextSelected: {
     color: '#FFFFFF',
@@ -3075,96 +3062,97 @@ const styles = StyleSheet.create({
   /* DOB Dropdown Row */
   dobRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
   dobDropdownBtn: {
     flex: 1,
-    height: 52,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: '#1F2937',
+    height: 42,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2DDD5',
     backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
   },
   dobDropdownBtnActive: {
-    borderColor: '#4D0E13',
-    backgroundColor: '#FFFDF9',
+    borderColor: Colors.limeOlive,
+    backgroundColor: '#FAFCE8',
   },
   dobDropdownText: {
     fontSize: 15,
-    color: '#6B7280',
+    color: '#7E6C70',
     fontWeight: '500',
   },
   dobDropdownTextActive: {
-    color: '#111827',
-    fontWeight: '700',
-    fontSize: 15.5,
+    color: '#231215',
+    fontWeight: '600',
+    fontSize: 15,
   },
   dropdownChevron: {
-    fontSize: 15,
-    color: '#1F2937',
+    fontSize: 11,
+    color: '#523E42',
     fontWeight: '700',
   },
 
   /* Height Dropdown */
   heightDropdownBtn: {
-    height: 54,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: '#1F2937',
+    height: 42,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2DDD5',
     backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
   heightDropdownBtnActive: {
-    borderColor: '#4D0E13',
-    backgroundColor: '#FFFDF9',
+    borderColor: Colors.limeOlive,
+    backgroundColor: '#FAFCE8',
   },
   heightDropdownText: {
     fontSize: 15,
-    color: '#6B7280',
+    color: '#7E6C70',
     fontWeight: '500',
   },
   heightDropdownTextActive: {
-    fontSize: 15.5,
-    color: '#111827',
-    fontWeight: '700',
+    fontSize: 15,
+    color: '#231215',
+    fontWeight: '600',
   },
 
-  /* Primary Next Button (Image 2, 3, 4) in Manamaalai Theme */
+  /* Primary Next Button in Manamaalai Theme */
   primaryNextBtn: {
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: '#4D0E13', // Manamaalai Theme Colour
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.plumBurgundy,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#4D0E13',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.28,
-    shadowRadius: 5,
-    elevation: 4,
+    marginTop: 10,
+    shadowColor: Colors.plumBurgundy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.20,
+    shadowRadius: 4,
+    elevation: 3,
   },
   primaryNextBtnIncomplete: {
     opacity: 0.95,
   },
   primaryNextBtnText: {
-    fontSize: 16,
+    fontSize: 15.5,
     fontWeight: '700',
-    color: '#FFFDF9',
+    color: '#FFFFFF',
     letterSpacing: 0.3,
   },
 
   /* Dashed Divider Line */
   dashedLine: {
-    marginVertical: 18,
+    marginVertical: 10,
     borderTopWidth: 1,
     borderStyle: 'dashed',
-    borderColor: '#D1D5DB',
+    borderColor: '#E6E2CF',
   },
 
   /* Helpline Row */
@@ -3172,82 +3160,83 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: 2,
   },
   helplineLabel: {
-    fontSize: 14.5,
-    color: '#374151',
+    fontSize: 12.5,
+    color: Colors.textSecondary,
     fontWeight: '500',
   },
   helplinePhone: {
-    fontSize: 15,
-    color: '#D97706', // Auspicious Temple Gold / Amber
+    fontSize: 12.5,
+    color: Colors.limeOlive,
     fontWeight: '700',
   },
 
   /* Step Card (Steps 2 - 5) */
   stepCard: {
     backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: BorderRadius.lg,
+    padding: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2DDD5',
     ...Shadows.subtle,
   },
   stepSectionHeader: {
-    fontSize: 19,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#4D0E13',
-    marginBottom: 6,
+    color: Colors.plumBurgundy,
+    marginBottom: 2,
   },
   stepSectionSub: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginBottom: 16,
+    fontSize: 12.5,
+    color: Colors.textMuted,
+    marginBottom: 8,
   },
   fieldLabel: {
-    fontSize: 14.5,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
-    marginBottom: 8,
+    color: '#231215',
+    marginBottom: 4,
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
   },
   horizontalChipsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   textInput: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    borderColor: '#E2DDD5',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     fontSize: 15,
-    color: '#111827',
+    color: '#231215',
+    height: 42,
   },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 18,
-    paddingVertical: 8,
+    marginTop: 8,
+    paddingVertical: 4,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: '#EEEBDD',
   },
   switchLabel: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: '#231215',
   },
   switchSub: {
-    fontSize: 12.5,
-    color: '#6B7280',
-    marginTop: 2,
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginTop: 1,
   },
 
   /* Picker Modals (Day / Month / Year) */
@@ -3277,16 +3266,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#EEEBDD',
   },
   pickerModalTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#111827',
+    color: '#231215',
   },
   pickerModalClose: {
     fontSize: 18,
-    color: '#6B7280',
+    color: '#7E6C70',
     fontWeight: '700',
   },
   gridContainer: {
@@ -3306,8 +3295,8 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
+    borderColor: '#E6E2CF',
+    backgroundColor: '#F7F6F1',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -3316,24 +3305,24 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
+    borderColor: '#E6E2CF',
+    backgroundColor: '#F7F6F1',
     justifyContent: 'center',
     alignItems: 'center',
   },
   gridItemSelected: {
-    backgroundColor: '#4D0E13',
-    borderColor: '#4D0E13',
+    backgroundColor: Colors.limeOlive,
+    borderColor: Colors.limeOlive,
   },
   gridItemText: {
     fontSize: 14.5,
     fontWeight: '600',
-    color: '#111827',
+    color: '#231215',
   },
   monthGridItemText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: '#231215',
   },
   gridItemTextSelected: {
     color: '#FFFFFF',
@@ -3343,26 +3332,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 11,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#EEEBDD',
   },
   yearListItemSelected: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: '#F4F6D8',
   },
   yearListItemText: {
     fontSize: 16,
-    color: '#1F2937',
+    color: '#231215',
     fontWeight: '500',
   },
   yearListItemTextSelected: {
-    color: '#4D0E13',
+    color: '#49141C',
     fontWeight: '700',
   },
   yearCheck: {
     fontSize: 16,
-    color: '#4D0E13',
+    color: '#49141C',
     fontWeight: 'bold',
   },
 
@@ -3398,188 +3387,188 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#E6E2CF',
   },
   heightSheetTitle: {
     fontSize: 17.5,
     fontWeight: '700',
-    color: '#111827',
+    color: '#231215',
   },
   heightRowItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#EEEBDD',
   },
   heightRowItemSelected: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: '#F4F6D8',
   },
   heightRowText: {
     fontSize: 15.5,
-    color: '#1F2937',
+    color: '#231215',
     fontWeight: '500',
   },
   heightRowTextSelected: {
-    color: '#4D0E13',
+    color: '#49141C',
     fontWeight: '700',
   },
   heightSelectedCheck: {
     fontSize: 16,
-    color: '#4D0E13',
+    color: '#49141C',
     fontWeight: 'bold',
   },
 
   /* Step 2: Religious Details Styles */
   page2SectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 4,
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.plumBurgundy,
+    marginBottom: 2,
   },
   notchBoxContainer: {
-    marginTop: 18,
+    marginTop: 10,
     position: 'relative',
   },
   notchBox: {
-    height: 56,
-    borderWidth: 1.5,
-    borderColor: '#CBD5E1',
+    height: 40,
+    borderWidth: 1,
+    borderColor: '#E2DDD5',
     borderRadius: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
   },
   notchBoxActive: {
-    borderColor: '#334155',
+    borderColor: Colors.limeOlive,
   },
   notchLabelWrapper: {
     position: 'absolute',
-    top: -9,
-    left: 12,
+    top: -7,
+    left: 10,
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
     zIndex: 2,
   },
   notchLabelText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '600',
-    color: '#64748B',
+    color: Colors.textMuted,
   },
   notchLabelTextActive: {
-    color: '#334155',
+    color: Colors.plumBurgundy,
   },
   notchValueText: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#0F172A',
+    color: '#231215',
     flex: 1,
   },
   notchPlaceholderText: {
-    color: '#94A3B8',
+    color: Colors.textMuted,
     fontWeight: '400',
   },
   notchChevron: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#334155',
-    marginLeft: 8,
+    color: Colors.textSecondary,
+    marginLeft: 6,
   },
   subcasteInputContainer: {
-    marginTop: 18,
+    marginTop: 10,
   },
   subcasteInput: {
-    height: 54,
-    borderWidth: 1.5,
-    borderColor: '#CBD5E1',
+    height: 44,
+    borderWidth: 1,
+    borderColor: '#E2DDD5',
     borderRadius: 8,
-    paddingHorizontal: 16,
-    fontSize: 14.5,
-    color: '#0F172A',
+    paddingHorizontal: 12,
+    fontSize: 15,
+    color: '#231215',
     backgroundColor: '#FFFFFF',
   },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 18,
-    marginBottom: 8,
+    marginTop: 8,
+    marginBottom: 2,
   },
   checkboxBox: {
-    width: 22,
-    height: 22,
-    borderWidth: 1.8,
-    borderColor: '#94A3B8',
+    width: 17,
+    height: 17,
+    borderWidth: 1.2,
+    borderColor: Colors.limeOlive,
     borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
-    marginRight: 12,
+    marginRight: 8,
   },
   checkboxBoxChecked: {
-    backgroundColor: '#4D0E13',
-    borderColor: '#4D0E13',
+    backgroundColor: Colors.limeOlive,
+    borderColor: Colors.limeOlive,
   },
   checkboxCheckmark: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '800',
     marginTop: -1,
   },
   checkboxLabel: {
-    fontSize: 14.5,
-    color: '#334155',
+    fontSize: 14,
+    color: '#523E42',
     fontWeight: '500',
     flex: 1,
   },
   doshamSection: {
-    marginTop: 26,
-    marginBottom: 10,
+    marginTop: 10,
+    marginBottom: 4,
   },
   doshamTitleRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginBottom: 14,
+    marginBottom: 6,
   },
   doshamTitle: {
-    fontSize: 15.5,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#231215',
   },
   optionalText: {
-    fontSize: 13,
-    color: '#94A3B8',
+    fontSize: 12.5,
+    color: '#7E6C70',
     fontWeight: '400',
   },
   doshamPillsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   doshamPill: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: 6,
     paddingHorizontal: 6,
-    borderRadius: 24,
-    borderWidth: 1.5,
-    borderColor: '#CBD5E1',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2DDD5',
     backgroundColor: '#FFFFFF',
   },
   doshamPillSelected: {
-    backgroundColor: '#4D0E13',
-    borderColor: '#4D0E13',
+    backgroundColor: Colors.limeOlive,
+    borderColor: Colors.limeOlive,
   },
   doshamPillText: {
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#334155',
-    marginLeft: 5,
+    color: '#523E42',
+    marginLeft: 4,
   },
   doshamPillTextSelected: {
     color: '#FFFFFF',
@@ -3615,17 +3604,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#E6E2CF',
   },
   bottomSheetTitle: {
-    fontSize: 17.5,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: '#231215',
   },
   modalSearchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F7F6F1',
     borderRadius: 10,
     marginHorizontal: 18,
     marginVertical: 12,
@@ -3638,13 +3627,13 @@ const styles = StyleSheet.create({
   },
   modalSearchInput: {
     flex: 1,
-    fontSize: 14.5,
-    color: '#0F172A',
+    fontSize: 15,
+    color: '#231215',
     paddingVertical: 0,
   },
   modalSearchClear: {
     fontSize: 15,
-    color: '#94A3B8',
+    color: '#7E6C70',
     paddingHorizontal: 6,
     fontWeight: 'bold',
   },
@@ -3652,71 +3641,71 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#F7F6F1',
   },
   modalRowItemSelected: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: '#F4F6D8',
   },
   modalRowText: {
     fontSize: 15.5,
-    color: '#1E293B',
+    color: '#231215',
     fontWeight: '500',
   },
   modalRowTextSelected: {
-    color: '#4D0E13',
+    color: '#49141C',
     fontWeight: '700',
   },
   modalRowCheck: {
     fontSize: 16,
-    color: '#4D0E13',
+    color: '#49141C',
     fontWeight: 'bold',
   },
   customCasteItem: {
     paddingVertical: 16,
     paddingHorizontal: 20,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F7F6F1',
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#E6E2CF',
   },
   customCasteText: {
     fontSize: 15,
-    color: '#4D0E13',
+    color: '#49141C',
     fontWeight: '600',
   },
 
   /* Step 3: Location Details Styles */
   unselectedSelectBox: {
-    height: 56,
-    borderWidth: 1.5,
-    borderColor: '#CBD5E1',
+    height: 44,
+    borderWidth: 1,
+    borderColor: '#E2DDD5',
     borderRadius: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
-    marginTop: 18,
+    marginTop: 10,
   },
   unselectedSelectPlaceholder: {
     fontSize: 15,
-    color: '#64748B',
+    color: Colors.textMuted,
     fontWeight: '400',
   },
   matchBanner: {
-    marginTop: 24,
-    backgroundColor: '#F0FAF4',
-    borderRadius: 12,
-    padding: 16,
+    marginTop: 14,
+    backgroundColor: Colors.limeOliveLight,
+    borderRadius: 10,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#DCFCE7',
+    borderColor: Colors.border,
   },
   matchBannerTitle: {
     fontSize: 16.5,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#231215',
   },
   matchBannerSubtitle: {
     fontSize: 13,
@@ -3734,7 +3723,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6E2CF',
     paddingVertical: 10,
     paddingHorizontal: 12,
     marginRight: 12,
@@ -3745,7 +3734,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     marginRight: 10,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#E6E2CF',
   },
   matchCardDetails: {
     flex: 1,
@@ -3753,20 +3742,20 @@ const styles = StyleSheet.create({
   matchCardAgeHeight: {
     fontSize: 13.5,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#231215',
   },
   matchCardCommunity: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#7E6C70',
     marginTop: 2,
   },
   sheetTopSearchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F7F6F1',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E6E2CF',
     marginHorizontal: 18,
     marginTop: 6,
     marginBottom: 14,
@@ -3780,11 +3769,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#E6E2CF',
   },
   sheetSubheadingTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#231215',
   },
 });

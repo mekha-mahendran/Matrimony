@@ -218,3 +218,106 @@ export interface SearchFilterState {
   searchQuery: string;
   sortBy: 'relevance' | 'newest' | 'age_asc' | 'age_desc' | 'porutham';
 }
+
+/* ─── Assisted Matchmaking & Operations Package Types ───────────────────────── */
+
+export interface JathagamDocument {
+  id: string;
+  fileName: string;
+  fileType: 'pdf' | 'image';
+  uploadDate: string;
+  fileSize: string;
+  verifiedByAstrologer: boolean;
+  astrologerName?: string;
+  astrologerNotes?: string;
+  lagnam?: string;
+  dhasaBalance?: string;
+  rasiChart?: { [house: string]: string[] };
+  navamsamChart?: { [house: string]: string[] };
+}
+
+export interface FamilyDecisionNote {
+  id: string;
+  profileId: string;
+  authorRole: 'Father' | 'Mother' | 'Brother' | 'Sister' | 'Elder' | 'Self';
+  authorName: string;
+  status: 'approved' | 'under_review' | 'declined' | 'temple_meeting_fixed' | 'pending_inquiry';
+  noteText: string;
+  createdAt: string;
+}
+
+export interface RelationshipManager {
+  id: string;
+  name: string;
+  role: string;
+  branch: string;
+  phone: string;
+  whatsapp: string;
+  photo: string;
+  rating: number;
+  experienceYears: number;
+  specialization: string;
+  activeClientsCount: number;
+  successfulMarriagesCount: number;
+}
+
+export interface RMHandpickedMatch {
+  id: string;
+  profileId: string;
+  candidateName: string;
+  candidatePhoto: string;
+  candidateAge: number;
+  candidateCity: string;
+  candidateProfession: string;
+  matchScore: number;
+  curatedAt: string;
+  rmNotes: string;
+  status: 'suggested' | 'intro_call_scheduled' | 'horoscope_exchanged' | 'temple_meeting_fixed';
+  scheduledDate?: string;
+}
+
+export interface MatrimonyBranch {
+  id: string;
+  name: string;
+  city: string;
+  district: string;
+  address: string;
+  phone: string;
+  managerName: string;
+  activeAgentsCount: number;
+  registeredProfilesCount: number;
+  successfulMarriages: number;
+  monthlyRevenueInr: number;
+}
+
+export interface MatrimonyAgent {
+  id: string;
+  agentCode: string;
+  name: string;
+  phone: string;
+  email: string;
+  branchId: string;
+  branchName: string;
+  territory: string;
+  totalProfilesEnrolled: number;
+  activeConversions: number;
+  totalCommissionEarned: number;
+  pendingPayout: number;
+  status: 'active' | 'suspended';
+  rating: number;
+}
+
+export interface CommissionRecord {
+  id: string;
+  agentCode: string;
+  clientProfileId: string;
+  clientName: string;
+  planName: string;
+  planAmount: number;
+  commissionRate: number; // e.g. 20%
+  commissionAmount: number;
+  date: string;
+  status: 'paid' | 'processing' | 'pending';
+  paymentReference?: string;
+}
+

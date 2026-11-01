@@ -552,8 +552,8 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           { paddingTop: topInset + 6 },
           (step === 'otp' || step === 'account_exists') && {
             borderBottomWidth: step === 'otp' ? 1 : 0,
-            borderBottomColor: '#F3F4F6',
-            backgroundColor: '#FFFFFF',
+            borderBottomColor: Colors.border,
+            backgroundColor: Colors.vanilla,
           },
         ]}
       >
@@ -582,7 +582,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             <Text
               style={[
                 styles.backArrow,
-                (step === 'otp' || step === 'account_exists') && { color: '#111827', fontSize: 24 },
+                (step === 'otp' || step === 'account_exists') && { color: Colors.plumBurgundy, fontSize: 24 },
               ]}
             >
               ←
@@ -593,7 +593,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             <Text
               style={[
                 styles.headerTitle,
-                step === 'otp' && { color: '#111827', fontSize: 18, fontWeight: '700' },
+                step === 'otp' && { color: Colors.plumBurgundy, fontSize: 18, fontWeight: '700' },
                 { fontFamily: isTa ? Typography.fontNotoSerifTamil : Typography.fontCormorant },
               ]}
             >
@@ -677,42 +677,33 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               </View>
             )}
 
-            {/* Bottom spacer so scroll doesn't hide behind bottom card */}
-            <View style={{ height: 160 }} />
+            {/* Primary Matrimony CTA Button & Helpline - naturally positioned */}
+            <View style={styles.actionSection}>
+              <TouchableOpacity
+                style={styles.startRegBtn}
+                onPress={handleStartRegistration}
+                activeOpacity={0.88}
+              >
+                <Text style={[styles.startRegBtnText, { fontFamily: isTa ? Typography.fontNotoSansTamil : Typography.fontPoppins }]}>
+                  {t.startRegistrationBtn}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Helpline Call Row */}
+              <TouchableOpacity
+                style={styles.helplineRow}
+                onPress={handleCallSupport}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.helplineLabel, { fontFamily: isTa ? Typography.fontNotoSansTamil : Typography.fontPoppins }]}>
+                  {t.needHelpCall}
+                </Text>
+                <Text style={styles.helplinePhone}>  📞 +91 8144998877</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ height: bottomInset + 16 }} />
           </ScrollView>
-
-          {/* ============================================================ */}
-          {/* 3. BOTTOM REGISTRATION CTA & HELPLINE                        */}
-          {/* ============================================================ */}
-          <View
-            style={[
-              styles.bottomCardContainer,
-              { paddingBottom: bottomInset + 8 },
-            ]}
-          >
-            {/* Primary Matrimony CTA Button */}
-            <TouchableOpacity
-              style={styles.startRegBtn}
-              onPress={handleStartRegistration}
-              activeOpacity={0.88}
-            >
-              <Text style={[styles.startRegBtnText, { fontFamily: isTa ? Typography.fontNotoSansTamil : Typography.fontPoppins }]}>
-                {t.startRegistrationBtn}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Helpline Call Row */}
-            <TouchableOpacity
-              style={styles.helplineRow}
-              onPress={handleCallSupport}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.helplineLabel, { fontFamily: isTa ? Typography.fontNotoSansTamil : Typography.fontPoppins }]}>
-                {t.needHelpCall}
-              </Text>
-              <Text style={styles.helplinePhone}>  📞 +91 8144998877</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       ) : step === 'details' ? (
         /* ============================================================ */
@@ -720,7 +711,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         /* ============================================================ */
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ flex: 1, backgroundColor: '#FFFFFF' }}
+          style={{ flex: 1, backgroundColor: Colors.vanilla }}
         >
           <ScrollView
             contentContainerStyle={[
@@ -872,7 +863,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         /* ============================================================ */
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ flex: 1, backgroundColor: '#FFFFFF' }}
+          style={{ flex: 1, backgroundColor: Colors.vanilla }}
         >
           <ScrollView
             contentContainerStyle={[
@@ -1007,7 +998,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             </View>
 
             {/* Spacer */}
-            <View style={{ height: 40 }} />
+            <View style={{ height: 20 }} />
 
             {/* Submit Button in Manamaalai Theme Colour */}
             <TouchableOpacity
@@ -1568,19 +1559,19 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.vanilla,
   },
 
   /* 1. Header */
   header: {
-    backgroundColor: '#FFFDF9',
+    backgroundColor: Colors.vanilla,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#EADBCE',
+    borderBottomColor: Colors.border,
     zIndex: 10,
   },
   headerLeft: {
@@ -1592,9 +1583,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FAF5EE',
+    backgroundColor: Colors.sandLight,
     borderWidth: 1,
-    borderColor: '#D8C4AC',
+    borderColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1610,19 +1601,19 @@ const styles = StyleSheet.create({
   backArrow: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#4D0E13',
+    color: Colors.plumBurgundy,
   },
   headerTitleCol: {
     flexDirection: 'column',
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#4D0E13',
+    color: Colors.plumBurgundy,
   },
   headerSubtitle: {
-    fontSize: 11,
-    color: '#8C7262',
+    fontSize: 12.5,
+    color: Colors.textMuted,
     marginTop: 1,
   },
   langPillBtn: {
@@ -1630,218 +1621,201 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 16,
     borderWidth: 1.2,
-    borderColor: '#B08A4F',
-    backgroundColor: '#FAF5EE',
+    borderColor: Colors.limeOlive,
+    backgroundColor: Colors.sandLight,
   },
   langPillText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
-    color: '#4D0E13',
+    color: Colors.plumBurgundy,
     letterSpacing: 0.3,
   },
 
   /* Main Container */
   mainContainer: {
     flex: 1,
-    backgroundColor: '#FCFAF7',
+    backgroundColor: '#FFFFFF',
   },
   scrollBody: {
     paddingHorizontal: 16,
-    paddingTop: 20,
+    paddingTop: 10,
   },
 
   /* Heading */
   headingSection: {
-    marginTop: 6,
-    marginBottom: 16,
+    marginTop: 0,
+    marginBottom: 8,
   },
   headingTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#4D0E13',
-    lineHeight: 26,
+    color: Colors.plumBurgundy,
+    lineHeight: 22,
   },
   headingSubtitle: {
-    fontSize: 12.5,
-    color: '#7A6458',
-    marginTop: 4,
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginTop: 2,
     lineHeight: 18,
   },
 
-  /* 3-Column Profile Pills Grid (Image 1) */
+  /* 3-Column Profile Pills Grid */
   pillsGrid: {
     width: '100%',
-    marginBottom: 16,
+    marginBottom: 6,
   },
   pillRow: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
-    gap: 8,
-    marginBottom: 10,
+    gap: 6,
+    marginBottom: 6,
   },
   pillCard: {
-    height: 44,
-    borderRadius: 22,
+    height: 36,
+    borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 6,
-    borderWidth: 1.2,
+    borderWidth: 1,
   },
   pillCardSelected: {
-    backgroundColor: '#4D0E13',
-    borderColor: '#4D0E13',
-    shadowColor: '#4D0E13',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.22,
-    shadowRadius: 3,
-    elevation: 3,
+    backgroundColor: Colors.limeOlive,
+    borderColor: Colors.limeOlive,
+    shadowColor: Colors.plumBurgundy,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
   },
   pillCardUnselected: {
-    backgroundColor: '#FFFDF9',
-    borderColor: '#D8C4AC',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2DDD5',
   },
   pillRadioCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 6,
   },
   pillRadioSelected: {
-    backgroundColor: '#FFFDF9',
+    backgroundColor: '#FFFFFF',
   },
   pillRadioUnselected: {
-    borderWidth: 1.3,
-    borderColor: '#B08A4F',
+    borderWidth: 1.2,
+    borderColor: Colors.limeOlive,
     backgroundColor: 'transparent',
   },
   pillCheckmark: {
-    fontSize: 12,
+    fontSize: 9,
     fontWeight: '900',
-    color: '#4D0E13',
-    lineHeight: 14,
+    color: Colors.limeOlive,
+    lineHeight: 12,
   },
   pillText: {
-    fontSize: 13,
+    fontSize: 14,
   },
   pillTextSelected: {
     fontWeight: '700',
-    color: '#FFFDF9',
+    color: '#FFFFFF',
   },
   pillTextUnselected: {
     fontWeight: '600',
-    color: '#2A1810',
+    color: Colors.textPrimary,
   },
 
   /* Mother Tongue Section (Manamaalai Theme) */
   motherTongueSection: {
-    marginTop: 14,
-    marginBottom: 20,
+    marginTop: 6,
+    marginBottom: 10,
   },
   motherTongueTitle: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#4D0E13',
-    marginBottom: 14,
+    color: Colors.plumBurgundy,
+    marginBottom: 8,
   },
   motherTongueBox: {
-    height: 52,
-    borderWidth: 1.3,
-    borderColor: '#D8C4AC',
-    borderRadius: 10,
-    backgroundColor: '#FFFDF9',
-    paddingHorizontal: 16,
+    height: 44,
+    borderWidth: 1,
+    borderColor: '#E2DDD5',
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     position: 'relative',
-    shadowColor: '#4D0E13',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   floatingNotchBadge: {
     position: 'absolute',
-    top: -9,
-    left: 14,
-    backgroundColor: '#FCFAF7',
-    paddingHorizontal: 6,
+    top: -7,
+    left: 10,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 4,
   },
   floatingNotchText: {
-    fontSize: 11.5,
-    color: '#7A6458',
+    fontSize: 12.5,
+    color: Colors.textMuted,
     fontWeight: '600',
   },
   motherTongueValue: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#4D0E13',
+    fontWeight: '600',
+    color: Colors.plumBurgundy,
   },
   chevronDownIcon: {
-    fontSize: 18,
-    color: '#4D0E13',
+    fontSize: 13,
+    color: Colors.plumBurgundy,
     fontWeight: '700',
   },
 
-  /* Bottom Clean Registration Card (Manamaalai Theme) */
-  bottomCardContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFDF9',
-    borderTopWidth: 1,
-    borderTopColor: '#EADBCE',
-    paddingTop: 14,
-    paddingHorizontal: 16,
-    shadowColor: '#4D0E13',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 6,
+  /* Action Section & Button - naturally positioned */
+  actionSection: {
+    marginTop: 14,
+    marginBottom: 8,
   },
   startRegBtn: {
-    height: 50,
-    backgroundColor: '#4D0E13',
-    borderRadius: 25,
+    height: 44,
+    backgroundColor: Colors.plumBurgundy,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#4D0E13',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.28,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowColor: Colors.plumBurgundy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.22,
+    shadowRadius: 4,
+    elevation: 3,
   },
   startRegBtnText: {
-    fontSize: 16,
+    fontSize: 15.5,
     fontWeight: '700',
-    color: '#FFFDF9',
+    color: '#FFFFFF',
     letterSpacing: 0.3,
   },
   helplineRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 12,
+    marginTop: 8,
   },
   helplineLabel: {
-    fontSize: 12,
-    color: '#7A6458',
+    fontSize: 12.5,
+    color: Colors.textSecondary,
     fontWeight: '500',
   },
   helplinePhone: {
-    fontSize: 12,
-    color: '#B08A4F',
+    fontSize: 12.5,
+    color: Colors.limeOlive,
     fontWeight: '700',
   },
 
   /* Mother Tongue Modal (Manamaalai Theme) */
   langModalContainer: {
     flex: 1,
-    backgroundColor: '#FFFDF9',
+    backgroundColor: Colors.vanilla,
   },
   langModalHeaderRow: {
     flexDirection: 'row',
@@ -1849,7 +1823,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#EADBCE',
+    borderBottomColor: Colors.border,
     gap: 10,
   },
   langModalBackBtn: {
@@ -1858,22 +1832,22 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FAF5EE',
+    backgroundColor: Colors.sandLight,
     borderWidth: 1,
-    borderColor: '#D8C4AC',
+    borderColor: Colors.border,
   },
   langModalBackArrow: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#4D0E13',
+    color: Colors.plumBurgundy,
   },
   langSearchBox: {
     flex: 1,
     height: 42,
-    backgroundColor: '#FAF5EE',
+    backgroundColor: Colors.sandLight,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E8DBCB',
+    borderColor: Colors.border,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
@@ -1885,7 +1859,7 @@ const styles = StyleSheet.create({
   langSearchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#4D0E13',
+    color: Colors.textPrimary,
     paddingVertical: 0,
   },
   langSearchClearBtn: {
@@ -1893,19 +1867,19 @@ const styles = StyleSheet.create({
   },
   langSearchClearText: {
     fontSize: 14,
-    color: '#8C7262',
+    color: Colors.textMuted,
   },
   langModalSubheadRow: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0E5D8',
-    backgroundColor: '#FFFDF9',
+    borderBottomColor: Colors.border,
+    backgroundColor: Colors.sandLight,
   },
   langModalSubheadText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#4D0E13',
+    color: Colors.plumBurgundy,
   },
   langListScrollContent: {
     paddingBottom: 40,
@@ -1916,45 +1890,45 @@ const styles = StyleSheet.create({
   langGroupHeader: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#8C7262',
+    color: Colors.textSecondary,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#FAF5EE',
+    backgroundColor: Colors.sandLight,
   },
   langListRow: {
     paddingHorizontal: 16,
     paddingVertical: 13,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3EBE1',
-    backgroundColor: '#FFFDF9',
+    borderBottomColor: Colors.borderLight,
+    backgroundColor: Colors.vanilla,
   },
   langListRowSelected: {
-    backgroundColor: '#F5E6DF',
+    backgroundColor: Colors.limeOliveLight,
   },
   langListText: {
     fontSize: 14.5,
-    color: '#2A1810',
+    color: Colors.textPrimary,
     fontWeight: '500',
   },
   langListTextSelected: {
-    color: '#4D0E13',
+    color: Colors.plumBurgundy,
     fontWeight: '700',
   },
 
   /* Language Selection Modal (Picture 1) */
   langModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(35, 12, 18, 0.55)',
     justifyContent: 'flex-end',
   },
   langModalSheet: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.vanilla,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: 18,
     paddingHorizontal: 20,
     paddingBottom: 24,
-    shadowColor: '#000',
+    shadowColor: Colors.plumBurgundy,
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -1969,14 +1943,14 @@ const styles = StyleSheet.create({
   langModalTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.textPrimary,
   },
   langModalCloseBtn: {
     padding: 4,
   },
   langModalCloseText: {
     fontSize: 18,
-    color: '#4B5563',
+    color: Colors.textSecondary,
     fontWeight: '600',
   },
   langCardsRow: {
@@ -1995,12 +1969,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   langOptionCardSelected: {
-    borderColor: '#00A86B', // Selected green accent from Picture 1
-    backgroundColor: '#E8F6EF',
+    borderColor: Colors.limeOlive,
+    backgroundColor: Colors.limeOliveLight,
   },
   langOptionCardUnselected: {
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
+    borderColor: Colors.border,
+    backgroundColor: Colors.cardBg,
   },
   langWatermark: {
     position: 'absolute',
@@ -2010,10 +1984,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   langWatermarkSelected: {
-    color: 'rgba(0, 168, 107, 0.25)',
+    color: 'rgba(147, 162, 32, 0.22)',
   },
   langWatermarkUnselected: {
-    color: 'rgba(156, 163, 175, 0.2)',
+    color: 'rgba(126, 108, 112, 0.15)',
   },
   langCardContent: {
     flexDirection: 'row',
@@ -2030,17 +2004,17 @@ const styles = StyleSheet.create({
   },
   langRadioCircleSelected: {
     borderWidth: 2,
-    borderColor: '#00A86B',
+    borderColor: Colors.limeOlive,
   },
   langRadioCircleUnselected: {
     borderWidth: 1.5,
-    borderColor: '#9CA3AF',
+    borderColor: Colors.border,
   },
   langRadioDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#00A86B',
+    backgroundColor: Colors.limeOlive,
   },
   langCardTextCol: {
     justifyContent: 'center',
@@ -2050,23 +2024,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   langCardTitleSelected: {
-    color: '#065F46',
+    color: Colors.plumBurgundy,
   },
   langCardTitleUnselected: {
-    color: '#111827',
+    color: Colors.textPrimary,
   },
   langCardSubtitle: {
     fontSize: 11,
-    color: '#6B7280',
+    color: Colors.textSecondary,
     marginTop: 1,
   },
   langNextBtn: {
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#6B141C',
+    backgroundColor: Colors.plumBurgundy,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#6B141C',
+    shadowColor: Colors.plumBurgundy,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -2075,7 +2049,7 @@ const styles = StyleSheet.create({
   langNextBtnText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.vanilla,
   },
 
   /* Details Step Styles */
@@ -2083,46 +2057,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F9EDEA',
+    backgroundColor: Colors.sandLight,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: MatrimonyTheme.dustyPink,
+    borderColor: Colors.limeOlive,
     marginBottom: 14,
   },
   relationBadgeText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
-    color: MatrimonyTheme.burgundy,
+    color: Colors.plumBurgundy,
   },
   changeRelationBtn: {
     paddingVertical: 2,
     paddingHorizontal: 8,
     borderRadius: 8,
-    backgroundColor: MatrimonyTheme.burgundy,
+    backgroundColor: Colors.plumBurgundy,
   },
   changeRelationText: {
-    fontSize: 11.5,
+    fontSize: 12.5,
     fontWeight: '700',
-    color: MatrimonyTheme.creme,
+    color: Colors.vanilla,
   },
   detailsFormCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.cardBg,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: MatrimonyTheme.sand,
+    borderColor: Colors.border,
     padding: 16,
-    shadowColor: MatrimonyTheme.burgundy,
+    shadowColor: Colors.plumBurgundy,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 2,
   },
   fieldLabel: {
-    fontSize: 12.5,
+    fontSize: 14,
     fontWeight: '700',
-    color: MatrimonyTheme.burgundy,
+    color: Colors.plumBurgundy,
     marginBottom: 6,
   },
   genderRow: {
@@ -2134,50 +2108,50 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     borderRadius: 12,
     borderWidth: 1.2,
-    borderColor: MatrimonyTheme.sand,
-    backgroundColor: '#F8F3ED',
+    borderColor: Colors.border,
+    backgroundColor: Colors.sandLight,
     alignItems: 'center',
   },
   genderCardActive: {
-    backgroundColor: MatrimonyTheme.burgundy,
-    borderColor: MatrimonyTheme.burgundy,
+    backgroundColor: Colors.limeOlive,
+    borderColor: Colors.limeOlive,
   },
   genderText: {
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: '600',
-    color: MatrimonyTheme.textSecondary,
+    color: Colors.textSecondary,
   },
   genderTextActive: {
-    color: MatrimonyTheme.creme,
+    color: Colors.vanilla,
     fontWeight: '700',
   },
   textInput: {
     height: 48,
-    backgroundColor: '#F8F3ED',
+    backgroundColor: Colors.sandLight,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: MatrimonyTheme.sand,
+    borderColor: Colors.border,
     paddingHorizontal: 12,
-    fontSize: 14,
-    color: MatrimonyTheme.burgundy,
+    fontSize: 15,
+    color: Colors.textPrimary,
     fontWeight: '500',
   },
   phoneInputRow: {
     flexDirection: 'row',
-    height: 52,
-    borderWidth: 1.2,
-    borderColor: '#C7C2BA',
+    height: 46,
+    borderWidth: 1,
+    borderColor: Colors.border,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.cardBg,
     overflow: 'hidden',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   countryCodeBox: {
     height: 48,
-    backgroundColor: '#F8F3ED',
+    backgroundColor: Colors.sandLight,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: MatrimonyTheme.sand,
+    borderColor: Colors.border,
     paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -2185,7 +2159,7 @@ const styles = StyleSheet.create({
   countryCodeText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#4D0E13',
+    color: Colors.plumBurgundy,
   },
   termsRow: {
     flexDirection: 'row',
@@ -2198,48 +2172,49 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 5,
     borderWidth: 1.5,
-    borderColor: MatrimonyTheme.burgundy,
+    borderColor: Colors.plumBurgundy,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.cardBg,
   },
   checkboxActive: {
-    backgroundColor: MatrimonyTheme.burgundy,
+    backgroundColor: Colors.limeOlive,
+    borderColor: Colors.limeOlive,
   },
   checkmark: {
-    color: '#FFFFFF',
+    color: Colors.vanilla,
     fontSize: 12,
     fontWeight: '800',
   },
   termsText: {
-    fontSize: 11.5,
-    color: MatrimonyTheme.textSecondary,
+    fontSize: 12.5,
+    color: Colors.textSecondary,
     flex: 1,
-    lineHeight: 16,
+    lineHeight: 17,
   },
   submitWizardBtn: {
-    height: 50,
-    backgroundColor: MatrimonyTheme.burgundy,
-    borderRadius: 25,
+    height: 46,
+    backgroundColor: Colors.plumBurgundy,
+    borderRadius: 23,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 18,
-    shadowColor: MatrimonyTheme.burgundy,
+    shadowColor: Colors.plumBurgundy,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 2,
   },
   submitWizardText: {
-    fontSize: 14.5,
+    fontSize: 15.5,
     fontWeight: '700',
-    color: MatrimonyTheme.creme,
+    color: Colors.vanilla,
   },
   submitWizardArrow: {
-    fontSize: 15,
-    color: MatrimonyTheme.creme,
+    fontSize: 15.5,
+    color: Colors.vanilla,
     marginLeft: 6,
   },
   loginRedirectRow: {
@@ -2250,20 +2225,20 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   loginRedirectText: {
-    fontSize: 13,
-    color: MatrimonyTheme.textSecondary,
+    fontSize: 13.5,
+    color: Colors.textSecondary,
   },
   loginRedirectLink: {
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '700',
-    color: MatrimonyTheme.burgundy,
+    color: Colors.plumBurgundy,
     textDecorationLine: 'underline',
   },
 
   /* Support Modal */
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(77, 14, 19, 0.45)',
+    backgroundColor: 'rgba(73, 20, 28, 0.55)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -2271,41 +2246,41 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: MatrimonyTheme.creme,
+    backgroundColor: Colors.vanilla,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: MatrimonyTheme.sand,
+    borderColor: Colors.border,
     padding: 20,
   },
   modalTitle: {
     fontFamily: Typography.fontSerif,
     fontSize: 17,
     fontWeight: '700',
-    color: MatrimonyTheme.burgundy,
+    color: Colors.plumBurgundy,
     marginBottom: 10,
   },
   modalBody: {
     fontSize: 13,
-    color: MatrimonyTheme.textSecondary,
+    color: Colors.textSecondary,
     lineHeight: 19,
   },
   modalCloseBtn: {
     marginTop: 16,
-    backgroundColor: MatrimonyTheme.burgundy,
+    backgroundColor: Colors.plumBurgundy,
     paddingVertical: 10,
     borderRadius: 14,
     alignItems: 'center',
   },
   modalCloseBtnText: {
-    color: MatrimonyTheme.creme,
+    color: Colors.vanilla,
     fontWeight: '700',
     fontSize: 13.5,
   },
 
-  /* Basic Details Screen (Image 1) */
+  /* Basic Details Screen */
   basicDetailsScroll: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingHorizontal: 16,
+    paddingTop: 12,
     backgroundColor: '#FFFFFF',
     flexGrow: 1,
   },
@@ -2313,84 +2288,84 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   inputOutlineBox: {
-    height: 52,
-    borderWidth: 1.2,
-    borderColor: '#C7C2BA',
-    borderRadius: 12,
+    height: 40,
+    borderWidth: 1,
+    borderColor: '#E2DDD5',
+    borderRadius: 8,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 16,
+    paddingHorizontal: 12,
+    marginBottom: 8,
   },
   outlineTextInput: {
-    fontSize: 15,
-    color: '#1F2937',
+    fontSize: 13.5,
+    color: Colors.textPrimary,
     padding: 0,
   },
   inputHelperText: {
-    fontSize: 11.5,
-    color: '#6B7280',
-    marginTop: -10,
-    marginBottom: 16,
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginTop: -6,
+    marginBottom: 8,
     marginLeft: 4,
   },
   countryPillBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F7F5F0',
-    paddingHorizontal: 12,
-    borderRightWidth: 1.2,
-    borderRightColor: '#C7C2BA',
+    backgroundColor: '#F7F6F1',
+    paddingHorizontal: 10,
+    borderRightWidth: 1,
+    borderRightColor: '#E2DDD5',
     gap: 4,
   },
   countryFlag: {
-    fontSize: 16,
+    fontSize: 15,
   },
   countryChevron: {
-    fontSize: 11,
-    color: '#4D0E13',
+    fontSize: 10,
+    color: Colors.plumBurgundy,
     fontWeight: '700',
     marginLeft: 2,
   },
   phoneTextInput: {
     flex: 1,
-    fontSize: 15,
-    color: '#1F2937',
-    paddingHorizontal: 14,
+    fontSize: 13.5,
+    color: Colors.textPrimary,
+    paddingHorizontal: 10,
     paddingVertical: 0,
   },
   getOtpBtn: {
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#4D0E13', // Manamaalai Royal Burgundy Theme
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: Colors.plumBurgundy,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
-    shadowColor: '#4D0E13',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 5,
+    marginTop: 4,
+    shadowColor: Colors.plumBurgundy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.22,
+    shadowRadius: 4,
     elevation: 3,
   },
   getOtpBtnText: {
-    fontSize: 16,
+    fontSize: 14.5,
     fontWeight: '700',
-    color: '#FFFDF9',
+    color: '#FFFFFF',
     letterSpacing: 0.3,
   },
   termsConsentText: {
-    fontSize: 12,
-    color: '#8C7262',
+    fontSize: 11,
+    color: Colors.textMuted,
     textAlign: 'center',
-    marginTop: 16,
-    lineHeight: 18,
+    marginTop: 8,
+    lineHeight: 15,
     paddingHorizontal: 10,
   },
   detailsDashedLine: {
     borderBottomWidth: 1,
-    borderBottomColor: '#D8C4AC',
+    borderBottomColor: '#E6E2CF',
     borderStyle: 'dashed',
-    marginVertical: 24,
+    marginVertical: 10,
   },
   detailsHelplineRow: {
     flexDirection: 'row',
@@ -2398,20 +2373,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   detailsHelplineLabel: {
-    fontSize: 13.5,
-    color: '#4B5563',
+    fontSize: 12,
+    color: Colors.textSecondary,
   },
   detailsHelplinePhone: {
-    fontSize: 13.5,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#4D0E13',
+    color: Colors.limeOlive,
   },
 
   /* 1-Sec Quick Register Popup Bottom Sheet (Image 2) */
   quickRegOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    backgroundColor: 'rgba(35, 12, 18, 0.55)',
   },
   quickRegBackdrop: {
     position: 'absolute',
@@ -2421,12 +2396,12 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   quickRegSheet: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.vanilla,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
     paddingTop: 20,
-    shadowColor: '#000',
+    shadowColor: Colors.plumBurgundy,
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -2441,9 +2416,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#FAF5EE',
+    backgroundColor: Colors.sandLight,
     borderWidth: 1,
-    borderColor: '#E8DED2',
+    borderColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -2460,18 +2435,18 @@ const styles = StyleSheet.create({
   quickRegAppTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1F2937',
+    color: Colors.textPrimary,
     lineHeight: 20,
   },
   quickRegUserName: {
     fontSize: 13.5,
-    color: '#4B5563',
+    color: Colors.textSecondary,
     marginTop: 4,
     fontWeight: '500',
   },
   quickRegUserPhone: {
     fontSize: 13.5,
-    color: '#4B5563',
+    color: Colors.textSecondary,
     marginTop: 2,
     fontWeight: '500',
   },
@@ -2480,22 +2455,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#D8C4AC',
-    backgroundColor: '#FAF5EE',
+    borderColor: Colors.border,
+    backgroundColor: Colors.sandLight,
     alignSelf: 'flex-start',
   },
   quickRegLangText: {
     fontSize: 11.5,
     fontWeight: '700',
-    color: '#4D0E13',
+    color: Colors.plumBurgundy,
   },
   quickRegContinueBtn: {
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#4D0E13', // Manamaalai Royal Burgundy Theme
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: Colors.plumBurgundy,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#4D0E13',
+    shadowColor: Colors.plumBurgundy,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -2504,7 +2479,7 @@ const styles = StyleSheet.create({
   quickRegContinueText: {
     fontSize: 14.5,
     fontWeight: '700',
-    color: '#FFFDF9',
+    color: Colors.vanilla,
     letterSpacing: 0.5,
   },
   quickRegUseAnotherBtn: {
@@ -2516,43 +2491,43 @@ const styles = StyleSheet.create({
   quickRegUseAnotherText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#4D0E13',
+    color: Colors.plumBurgundy,
     letterSpacing: 0.3,
   },
   quickRegConsentContainer: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: Colors.border,
   },
   quickRegConsentNotice: {
     fontSize: 11.5,
-    color: '#6B7280',
+    color: Colors.textMuted,
     lineHeight: 16,
   },
   quickRegNoticeLink: {
-    color: '#1D4ED8',
+    color: Colors.plumBurgundy,
     textDecorationLine: 'underline',
   },
 
   /* OTP Screen (Image 1) */
   otpScrollBody: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    backgroundColor: Colors.vanilla,
     flexGrow: 1,
   },
   otpIllustrationWrapper: {
     alignItems: 'center',
-    marginVertical: 18,
+    marginVertical: 10,
   },
   otpIllustrationCircle: {
     width: 154,
     height: 154,
     borderRadius: 77,
     borderWidth: 1.5,
-    borderColor: '#4EAFA3', // Cyan/teal ring matching Image 1
-    backgroundColor: '#F3FAF9',
+    borderColor: Colors.limeOlive,
+    backgroundColor: Colors.limeOliveLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2560,12 +2535,12 @@ const styles = StyleSheet.create({
     width: 68,
     height: 98,
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.cardBg,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: Colors.border,
     alignItems: 'center',
     paddingTop: 6,
-    shadowColor: '#000',
+    shadowColor: Colors.plumBurgundy,
     shadowOpacity: 0.08,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
@@ -2575,19 +2550,19 @@ const styles = StyleSheet.create({
     width: 20,
     height: 3.5,
     borderRadius: 2,
-    backgroundColor: '#10B981',
+    backgroundColor: Colors.limeOlive,
   },
   otpSmsBubble: {
     marginTop: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.cardBg,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#9CA3AF',
+    borderColor: Colors.border,
     paddingHorizontal: 10,
     paddingVertical: 5,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
+    shadowColor: Colors.plumBurgundy,
+    shadowOpacity: 0.08,
     shadowRadius: 3,
     elevation: 3,
   },
@@ -2599,7 +2574,7 @@ const styles = StyleSheet.create({
     width: 4.5,
     height: 4.5,
     borderRadius: 2.5,
-    backgroundColor: '#4B5563',
+    backgroundColor: Colors.limeOlive,
   },
   otpBubbleTail: {
     width: 0,
@@ -2609,7 +2584,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 5,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: '#9CA3AF',
+    borderTopColor: Colors.border,
     marginTop: 1,
     alignSelf: 'center',
   },
@@ -2618,30 +2593,30 @@ const styles = StyleSheet.create({
     width: 38,
     height: 13,
     borderRadius: 6.5,
-    backgroundColor: '#4D0E13', // Manamaalai Theme
+    backgroundColor: Colors.plumBurgundy,
     justifyContent: 'center',
     alignItems: 'center',
   },
   otpPhoneBtnArrow: {
-    color: '#FFFFFF',
+    color: Colors.vanilla,
     fontSize: 8,
     fontWeight: '700',
   },
   otpInstructionText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.textPrimary,
     textAlign: 'center',
-    lineHeight: 24,
-    marginTop: 12,
+    lineHeight: 22,
+    marginTop: 10,
     paddingHorizontal: 20,
   },
   otpInputsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 16,
-    marginTop: 32,
-    marginBottom: 8,
+    gap: 14,
+    marginTop: 20,
+    marginBottom: 6,
   },
   otpSlotWrapper: {
     width: 52,
@@ -2652,15 +2627,15 @@ const styles = StyleSheet.create({
     height: 44,
     fontSize: 24,
     fontWeight: '700',
-    color: '#1F2937',
+    color: Colors.textPrimary,
     textAlign: 'center',
     padding: 0,
   },
   otpDigitFilled: {
-    color: '#4D0E13',
+    color: Colors.plumBurgundy,
   },
   otpDigitFocused: {
-    color: '#4D0E13',
+    color: Colors.limeOlive,
   },
   otpUnderline: {
     width: 48,
@@ -2669,16 +2644,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   otpUnderlineActive: {
-    backgroundColor: '#4D0E13',
+    backgroundColor: Colors.plumBurgundy,
   },
   otpUnderlineInactive: {
-    backgroundColor: '#D1D5DB',
+    backgroundColor: Colors.border,
   },
   otpActionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginTop: 24,
+    marginTop: 16,
     paddingHorizontal: 12,
   },
   otpActionCol: {
@@ -2686,7 +2661,7 @@ const styles = StyleSheet.create({
   },
   otpActionLabel: {
     fontSize: 12.5,
-    color: '#9CA3AF',
+    color: Colors.textMuted,
     marginBottom: 4,
   },
   otpResendBtnRow: {
@@ -2698,28 +2673,28 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   otpResendTextActive: {
-    color: '#4D0E13',
+    color: Colors.plumBurgundy,
   },
   otpResendTextDisabled: {
-    color: '#B08A4F',
+    color: Colors.textMuted,
   },
   otpTimerText: {
     fontSize: 13.5,
-    color: '#1F2937',
+    color: Colors.textPrimary,
     marginLeft: 6,
   },
   otpMissedCallText: {
     fontSize: 13.5,
     fontWeight: '600',
-    color: '#B08A4F',
+    color: Colors.limeOlive,
   },
   otpSubmitBtn: {
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#4D0E13', // Manamaalai Theme Colour
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: Colors.plumBurgundy,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#4D0E13',
+    shadowColor: Colors.plumBurgundy,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 5,
@@ -2728,48 +2703,49 @@ const styles = StyleSheet.create({
   otpSubmitBtnText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFDF9',
+    color: Colors.vanilla,
     letterSpacing: 0.3,
   },
 
   /* Account Already Exists Screen (Image 2) */
   accountExistsContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.vanilla,
   },
   accountExistsScroll: {
-    paddingHorizontal: 20,
-    paddingTop: 36,
+    paddingHorizontal: 16,
+    paddingTop: 20,
     paddingBottom: 20,
+    backgroundColor: Colors.vanilla,
   },
   accountExistsTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.plumBurgundy,
     textAlign: 'center',
   },
   accountExistsSubtitle: {
-    fontSize: 14.5,
-    color: '#374151',
+    fontSize: 14,
+    color: Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 20,
     marginTop: 12,
     paddingHorizontal: 16,
   },
   accountExistsPhoneBold: {
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.textPrimary,
   },
   existingProfileCard: {
-    marginTop: 32,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#E8CA93',
-    backgroundColor: '#FFFDF9',
-    padding: 18,
+    marginTop: 20,
+    borderRadius: 12,
+    borderWidth: 1.2,
+    borderColor: Colors.limeOlive,
+    backgroundColor: Colors.cardBg,
+    padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#B08A4F',
+    shadowColor: Colors.plumBurgundy,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 6,
@@ -2779,7 +2755,7 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: '#FFF6E9',
+    backgroundColor: Colors.limeOliveLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -2787,7 +2763,7 @@ const styles = StyleSheet.create({
   existingAvatarText: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#B08A4F',
+    color: Colors.plumBurgundy,
   },
   existingDetailsCol: {
     flex: 1,
@@ -2795,11 +2771,11 @@ const styles = StyleSheet.create({
   existingProfileName: {
     fontSize: 16.5,
     fontWeight: '700',
-    color: '#1F2937',
+    color: Colors.textPrimary,
   },
   existingProfileId: {
     fontSize: 13,
-    color: '#6B7280',
+    color: Colors.textMuted,
     marginTop: 2,
   },
   loginProfileLinkRow: {
@@ -2810,29 +2786,29 @@ const styles = StyleSheet.create({
   loginProfileLinkText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#B08A4F',
+    color: Colors.plumBurgundy,
   },
   loginProfileLinkChevron: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#B08A4F',
+    color: Colors.plumBurgundy,
     marginLeft: 3,
   },
   accountExistsBottomContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    backgroundColor: '#FFFFFF',
-    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    backgroundColor: Colors.vanilla,
+    marginBottom: 8,
   },
   continueCreatingBtn: {
-    minHeight: 52,
-    paddingVertical: 12,
+    minHeight: 46,
+    paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 26,
-    backgroundColor: '#4D0E13', // Manamaalai Theme Colour
+    borderRadius: 23,
+    backgroundColor: Colors.plumBurgundy,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#4D0E13',
+    shadowColor: Colors.plumBurgundy,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 5,
@@ -2841,7 +2817,7 @@ const styles = StyleSheet.create({
   continueCreatingBtnText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#FFFDF9',
+    color: Colors.vanilla,
     letterSpacing: 0.3,
     textAlign: 'center',
     lineHeight: 20,

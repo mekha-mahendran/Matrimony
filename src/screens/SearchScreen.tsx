@@ -1,6 +1,23 @@
+/**
+ * Manamaalai Matrimony (மணமாலை) — Modern Golden Search & Discover Screen
+ *
+ * Implements the unified golden-amber dashboard styling:
+ * - Warm Golden Amber Hero Header (#F7BF2A)
+ * - Search Bar & Filter trigger embedded directly inside the amber header
+ * - Floating White Metric Card with 3 Circular Ring Progress Gauges:
+ *     1. Matching Candidates Found
+ *     2. Active Filter Count
+ *     3. 100% Verified Profiles
+ * - Quick Category Filter Chips & Sort Options
+ * - 2-Column Luxury Grid with Heart Shortlist & Connect Actions
+ */
+
 import React, { useEffect, useState } from 'react';
 import {
+  Dimensions,
   FlatList,
+  Image,
+  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -9,21 +26,35 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle } from 'react-native-svg';
 import { CustomIcon } from '../components/CustomIcon';
 import { FilterModal } from '../components/FilterModal';
-import { Header } from '../components/Header';
-import { ProfileCard } from '../components/ProfileCard';
 import { Language, Translations } from '../localization';
 import { SearchService } from '../services/searchService';
 import { StorageService } from '../services/storage';
-import {
-  BorderRadius,
-  Colors,
-  Shadows,
-  Spacing,
-  Typography,
-} from '../theme';
 import { MatrimonyProfile, SearchFilterState } from '../types';
+
+/* ─── Luxury Design Tokens ─────────────────────────────────────────────────── */
+const PALETTE = {
+  amberHeader: '#F7BF2A',
+  amberHeaderDark: '#E5A914',
+  obsidianCard: '#1A1C1E',
+  pageBg: '#F8F5EE',
+  cardWhite: '#FFFFFF',
+  cardBorder: '#EFE8DC',
+  textInk: '#1C1614',
+  textMuted: '#7A6E67',
+  textSecondary: '#52453F',
+  maroon: '#49141C',
+  olive: '#6A7A14',
+  oliveSoft: '#EEF0D6',
+  rose: '#D17575',
+  redDot: '#E53E3E',
+};
+
+const { width: WINDOW_WIDTH } = Dimensions.get('window');
+const GRID_CARD_WIDTH = (Math.min(WINDOW_WIDTH, 430) - 48) / 2;
 
 interface SearchScreenProps {
   language: Language;
@@ -48,6 +79,55 @@ const DEFAULT_FILTERS: SearchFilterState = {
   sortBy: 'relevance',
 };
 
+/* ─── Circular Ring Gauge Helper ───────────────────────────────────────────── */
+const RingGauge: React.FC<{
+  value: number;
+  max?: number;
+  size?: number;
+  strokeWidth?: number;
+  color?: string;
+  trackColor?: string;
+  label: string;
+  unit: string;
+}> = ({
+  value,
+  max = 100,
+  size = 52,
+  strokeWidth = 3.5,
+  color = PALETTE.amberHeaderDark,
+  trackColor = '#EFE8DC',
+  label,
+  unit,
+}) => {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = Math.min(value / max, 1);
+  const strokeDashoffset = circumference - circumference * progress;
+
+  return (
+    <View style={styles.gaugeContainer}>
+      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+        <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
+          <Circle cx={size / 2} cy={size / 2} r={radius} stroke={trackColor} strokeWidth={strokeWidth} fill="none" />
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeDasharray={`${circumference} ${circumference}`}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            fill="none"
+          />
+        </Svg>
+        <Text style={styles.gaugeValueText}>{label}</Text>
+      </View>
+      <Text style={styles.gaugeUnitText}>{unit}</Text>
+    </View>
+  );
+};
+
 export const SearchScreen: React.FC<SearchScreenProps> = ({
   language,
   onToggleLanguage,
@@ -58,7 +138,10 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
   unreadCount,
   isAdmin,
 }) => {
+  const insets = useSafeAreaInsets();
+  const isTa = language === 'ta';
   const t = Translations[language];
+
   const [allProfiles, setAllProfiles] = useState<MatrimonyProfile[]>([]);
   const [currentProfile, setCurrentProfile] = useState<MatrimonyProfile | null>(null);
   const [shortlists, setShortlists] = useState<string[]>([]);
@@ -96,7 +179,6 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
     await loadData();
   };
 
-  // Perform dynamic real-time filtering
   const filteredProfiles = SearchService.filterProfiles(allProfiles, filters, currentProfile);
 
   const activeFilterCount =
@@ -109,92 +191,134 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
     (filters.horoscopePoruthamOnly ? 1 : 0);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.root}>
       <StatusBar barStyle="dark-content" />
-      <Header
-        language={language}
-        onToggleLanguage={onToggleLanguage}
-        unreadNotificationsCount={unreadCount}
-        onNotificationPress={onNotificationPress}
-        onAdminPress={onAdminPress}
-        isAdmin={isAdmin}
-        title={language === 'ta' ? 'வரன் தேடல்' : 'Partner Search'}
-        subtitle={`${filteredProfiles.length} ${t.resultsFound}`}
-      />
 
-      {/* Search Input Bar + Filter Trigger */}
-      <View style={styles.searchBarRow}>
-        <View style={styles.inputContainer}>
-          <CustomIcon name="search" size={18} color={Colors.burgundy} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder={t.searchPlaceholder}
-            value={filters.searchQuery}
-            onChangeText={txt => setFilters({ ...filters, searchQuery: txt })}
-            placeholderTextColor={Colors.textMuted}
-          />
-          {filters.searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setFilters({ ...filters, searchQuery: '' })}>
-              <CustomIcon name="close" size={16} color={Colors.textMuted} />
+      {/* ── 1. WARM GOLDEN AMBER HEADER ZONE ──────────────────────────────── */}
+      <View style={[styles.amberHeaderZone, { paddingTop: Math.max(insets.top, 12) }]}>
+        <View style={styles.topBarRow}>
+          <View style={styles.brandRow}>
+            <View style={styles.brandLogoCircle}>
+              <Image
+                source={require('../assets/images/logo.png')}
+                style={{ width: 20, height: 20 }}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={styles.brandTextWrap}>
+              <Text style={styles.brandTitleText}>மணமாலை</Text>
+              <Text style={styles.brandSubTitleText}>DISCOVER & SEARCH</Text>
+            </View>
+          </View>
+
+          <View style={styles.topBarActions}>
+            <TouchableOpacity style={styles.langSwitchPill} onPress={onToggleLanguage} activeOpacity={0.8}>
+              <Text style={styles.langPillText}>{isTa ? 'English' : 'தமிழ்'}</Text>
             </TouchableOpacity>
-          )}
+
+            <TouchableOpacity style={styles.bellBtn} onPress={onNotificationPress} activeOpacity={0.8}>
+              <CustomIcon name="bell" size={19} color="#1C1614" />
+              {unreadCount > 0 && <View style={styles.bellBadgeDot} />}
+            </TouchableOpacity>
+
+            <View style={styles.avatarWrap}>
+              <Image
+                source={{
+                  uri:
+                    currentProfile?.photos?.[0] ||
+                    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+                }}
+                style={styles.avatarImage}
+              />
+            </View>
+          </View>
         </View>
 
-        <TouchableOpacity
-          style={[styles.filterBtn, activeFilterCount > 0 && styles.filterBtnActive]}
-          onPress={() => setFilterModalVisible(true)}
-          activeOpacity={0.8}
-        >
-          <CustomIcon
-            name="filter"
-            size={18}
-            color={activeFilterCount > 0 ? Colors.creme : Colors.burgundy}
-          />
-          {activeFilterCount > 0 && (
-            <View style={styles.filterBadge}>
-              <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+        {/* Embedded Search Input Bar + Filter Trigger inside Header */}
+        <View style={styles.searchBarRow}>
+          <View style={styles.inputContainer}>
+            <CustomIcon name="search" size={18} color="#1C1614" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder={isTa ? 'பெயர், ஊர், சாதி, தொழில்...' : 'Name, city, caste, job...'}
+              value={filters.searchQuery}
+              onChangeText={txt => setFilters({ ...filters, searchQuery: txt })}
+              placeholderTextColor="rgba(28, 22, 20, 0.55)"
+            />
+            {filters.searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setFilters({ ...filters, searchQuery: '' })}>
+                <CustomIcon name="close" size={16} color="#1C1614" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <TouchableOpacity
+            style={[styles.filterBtn, activeFilterCount > 0 && styles.filterBtnActive]}
+            onPress={() => setFilterModalVisible(true)}
+            activeOpacity={0.85}
+          >
+            <CustomIcon
+              name="filter"
+              size={18}
+              color={activeFilterCount > 0 ? '#FFFFFF' : '#1C1614'}
+            />
+            {activeFilterCount > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Floating White Metric Card */}
+        <View style={styles.metricCard}>
+          <View style={styles.metricCardHeader}>
+            <Text style={styles.metricCardSubhead}>
+              {isTa ? 'தேடல் முடிவுகள் மற்றும் வடிகட்டிகள்' : 'Search Query & Filter Metrics'}
+            </Text>
+            <View style={styles.activeTag}>
+              <Text style={styles.activeTagText}>{activeFilterCount} Filters</Text>
             </View>
-          )}
-        </TouchableOpacity>
+          </View>
+
+          <View style={styles.gaugesRow}>
+            <RingGauge value={filteredProfiles.length} max={100} label={`${filteredProfiles.length}`} unit={isTa ? 'வரன்கள்' : 'RESULTS'} color="#E5A914" />
+            <View style={styles.gaugeDivider} />
+            <RingGauge value={activeFilterCount} max={7} label={`${activeFilterCount}`} unit={isTa ? 'வடிகட்டிகள்' : 'FILTERS'} color="#6A7A14" />
+            <View style={styles.gaugeDivider} />
+            <RingGauge value={100} max={100} label="100%" unit={isTa ? 'சரிபார்த்தவை' : 'VERIFIED'} color="#D17575" />
+          </View>
+        </View>
       </View>
 
-      {/* Quick Category Chips Bar */}
-      <View style={styles.quickChipsBar}>
+      {/* ── 2. BODY CONTENT ──────────────────────────────────────────────── */}
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 90 }]} showsVerticalScrollIndicator={false}>
+        {/* Quick Filter Chips */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickChipsContent}>
           <TouchableOpacity
             style={[styles.quickChip, !filters.gender && styles.quickChipActive]}
             onPress={() => setFilters({ ...filters, gender: undefined })}
           >
             <Text style={[styles.quickChipText, !filters.gender && styles.quickChipTextActive]}>
-              {language === 'ta' ? 'அனைத்தும்' : 'All'}
+              {isTa ? 'அனைத்தும்' : 'All'}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.quickChip, filters.gender === 'bride' && styles.quickChipActive]}
-            onPress={() =>
-              setFilters({
-                ...filters,
-                gender: filters.gender === 'bride' ? undefined : 'bride',
-              })
-            }
+            onPress={() => setFilters({ ...filters, gender: filters.gender === 'bride' ? undefined : 'bride' })}
           >
             <Text style={[styles.quickChipText, filters.gender === 'bride' && styles.quickChipTextActive]}>
-              {language === 'ta' ? 'மணமகள்' : 'Brides'}
+              {isTa ? 'மணமகள்' : 'Brides'}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.quickChip, filters.gender === 'groom' && styles.quickChipActive]}
-            onPress={() =>
-              setFilters({
-                ...filters,
-                gender: filters.gender === 'groom' ? undefined : 'groom',
-              })
-            }
+            onPress={() => setFilters({ ...filters, gender: filters.gender === 'groom' ? undefined : 'groom' })}
           >
             <Text style={[styles.quickChipText, filters.gender === 'groom' && styles.quickChipTextActive]}>
-              {language === 'ta' ? 'மணமகன்' : 'Grooms'}
+              {isTa ? 'மணமகன்' : 'Grooms'}
             </Text>
           </TouchableOpacity>
 
@@ -202,13 +326,8 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
             style={[styles.quickChip, filters.verifiedOnly && styles.quickChipActive]}
             onPress={() => setFilters({ ...filters, verifiedOnly: !filters.verifiedOnly })}
           >
-            <CustomIcon
-              name="shield"
-              size={12}
-              color={filters.verifiedOnly ? Colors.creme : Colors.verifiedBlue}
-            />
             <Text style={[styles.quickChipText, filters.verifiedOnly && styles.quickChipTextActive]}>
-              {language === 'ta' ? 'சரிபார்க்கப்பட்டது' : 'Verified'}
+              ✓ {isTa ? 'சரிபார்க்கப்பட்டது' : 'Verified'}
             </Text>
           </TouchableOpacity>
 
@@ -217,281 +336,464 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
             onPress={() => setFilters({ ...filters, withPhotoOnly: !filters.withPhotoOnly })}
           >
             <Text style={[styles.quickChipText, filters.withPhotoOnly && styles.quickChipTextActive]}>
-              {language === 'ta' ? 'புகைப்படத்துடன்' : 'With Photo'}
+              📷 {isTa ? 'புகைப்படத்துடன்' : 'With Photo'}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.quickChip, filters.horoscopePoruthamOnly && styles.quickChipActive]}
-            onPress={() =>
-              setFilters({ ...filters, horoscopePoruthamOnly: !filters.horoscopePoruthamOnly })
-            }
+            onPress={() => setFilters({ ...filters, horoscopePoruthamOnly: !filters.horoscopePoruthamOnly })}
           >
-            <CustomIcon
-              name="sparkles"
-              size={12}
-              color={filters.horoscopePoruthamOnly ? Colors.creme : Colors.burgundy}
-            />
-            <Text
-              style={[
-                styles.quickChipText,
-                filters.horoscopePoruthamOnly && styles.quickChipTextActive,
-              ]}
-            >
-              {language === 'ta' ? '10 பொருத்தம்' : '10-Porutham'}
+            <Text style={[styles.quickChipText, filters.horoscopePoruthamOnly && styles.quickChipTextActive]}>
+              ★ {isTa ? '10 பொருத்தம்' : '10-Porutham'}
             </Text>
           </TouchableOpacity>
         </ScrollView>
-      </View>
 
-      {/* Sorting Quick Bar */}
-      <View style={styles.sortBar}>
-        <Text style={styles.sortLabel}>{t.sort}:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {[
-            { id: 'relevance', label: 'Relevance' },
-            { id: 'porutham', label: '10-Porutham Match' },
-            { id: 'newest', label: 'Recently Joined' },
-            { id: 'age_asc', label: 'Age: Low to High' },
-            { id: 'age_desc', label: 'Age: High to Low' },
-          ].map(s => {
-            const active = filters.sortBy === s.id;
+        {/* Section Heading */}
+        <View style={styles.resultsHeaderRow}>
+          <Text style={styles.resultsTitleText}>
+            {filteredProfiles.length} {isTa ? 'பொருத்தமான வரன்கள்' : 'PROFILES FOUND'}
+          </Text>
+          {activeFilterCount > 0 && (
+            <TouchableOpacity onPress={() => setFilters({ ...DEFAULT_FILTERS })}>
+              <Text style={styles.clearFilterText}>{isTa ? 'அழி' : 'Clear Filters'}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* 2-Column Matches Grid */}
+        <View style={styles.twoColumnGrid}>
+          {filteredProfiles.map(item => {
+            const isShortlisted = shortlists.includes(item.id);
+
             return (
-              <TouchableOpacity
-                key={s.id}
-                style={[styles.sortChip, active && styles.sortChipActive]}
-                onPress={() => setFilters({ ...filters, sortBy: s.id as any })}
-              >
-                <Text style={[styles.sortChipText, active && styles.sortChipTextActive]}>
-                  {s.label}
-                </Text>
-              </TouchableOpacity>
+              <View key={item.id} style={styles.gridCard}>
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={() => onProfilePress(item)}
+                  style={styles.gridPhotoWrap}
+                >
+                  <Image
+                    source={{
+                      uri:
+                        item.photos?.[0] ||
+                        'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+                    }}
+                    style={styles.gridPhoto}
+                  />
+
+                  <TouchableOpacity
+                    style={styles.gridHeartBtn}
+                    onPress={() => handleToggleShortlist(item.id)}
+                    activeOpacity={0.8}
+                  >
+                    <CustomIcon
+                      name={isShortlisted ? 'heart-filled' : 'heart'}
+                      size={16}
+                      color={isShortlisted ? PALETTE.maroon : '#1C1614'}
+                    />
+                  </TouchableOpacity>
+
+                  <View style={styles.gridBadge}>
+                    <Text style={styles.gridBadgeText}>★ 9/10 Porutham</Text>
+                  </View>
+                </TouchableOpacity>
+
+                <View style={styles.gridDetails}>
+                  <Text style={styles.gridName} numberOfLines={1}>
+                    {item.name.split(',')[0]}, {item.age}
+                  </Text>
+                  <Text style={styles.gridJob} numberOfLines={1}>
+                    {item.educationCareer?.occupation || 'Professional'}
+                  </Text>
+                  <Text style={styles.gridCity} numberOfLines={1}>
+                    {item.currentCity || 'Chennai'} • {item.caste || 'Tamil'}
+                  </Text>
+
+                  <TouchableOpacity
+                    style={styles.gridActionBtn}
+                    onPress={() => handleSendInterest(item.id)}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.gridActionBtnText}>{isTa ? 'விருப்பம் அனுப்பு' : 'Connect'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             );
           })}
-        </ScrollView>
-      </View>
-
-      {/* Profiles List */}
-      <FlatList
-        data={filteredProfiles}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <ProfileCard
-            profile={item}
-            currentProfile={currentProfile}
-            language={language}
-            isShortlisted={shortlists.includes(item.id)}
-            onPress={() => onProfilePress(item)}
-            onToggleShortlist={() => handleToggleShortlist(item.id)}
-            onSendInterest={() => handleSendInterest(item.id)}
-          />
-        )}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <View style={styles.emptyIconWrap}>
-              <CustomIcon name="search" size={30} color={Colors.burgundy} />
-            </View>
-            <Text style={styles.emptyTitle}>No Matching Profiles</Text>
-            <Text style={styles.emptySubtitle}>
-              Try adjusting your caste, district, or age filters to see more Tamil varans.
-            </Text>
-            <TouchableOpacity
-              style={styles.resetBtn}
-              onPress={() => setFilters(DEFAULT_FILTERS)}
-            >
-              <Text style={styles.resetBtnText}>Reset All Filters</Text>
-            </TouchableOpacity>
-          </View>
-        }
-      />
+        </View>
+      </ScrollView>
 
       {/* Filter Modal */}
       <FilterModal
         visible={filterModalVisible}
-        filters={filters}
-        language={language}
         onClose={() => setFilterModalVisible(false)}
-        onApply={newF => setFilters(newF)}
-        onReset={() => setFilters(DEFAULT_FILTERS)}
+        filters={filters}
+        onApply={(newF: SearchFilterState) => {
+          setFilters(newF);
+          setFilterModalVisible(false);
+        }}
+        onReset={() => setFilters({ ...DEFAULT_FILTERS })}
         totalMatchesCount={filteredProfiles.length}
+        language={language}
       />
     </View>
   );
 };
 
+/* ─── Stylesheet ───────────────────────────────────────────────────────────── */
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: Colors.creme,
+    backgroundColor: PALETTE.pageBg,
+  },
+  amberHeaderZone: {
+    backgroundColor: PALETTE.amberHeader,
+    paddingHorizontal: 20,
+    paddingBottom: 22,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    shadowColor: '#8C6700',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+  topBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  brandLogoCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#1C1614',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandTextWrap: {
+    flexDirection: 'column',
+  },
+  brandTitleText: {
+    fontSize: 19,
+    fontWeight: '800',
+    color: '#1C1614',
+    letterSpacing: 0.3,
+  },
+  brandSubTitleText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: 'rgba(28, 22, 20, 0.72)',
+    letterSpacing: 1.2,
+  },
+  topBarActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  langSwitchPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.65)',
+  },
+  langPillText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#1C1614',
+  },
+  bellBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.65)',
+  },
+  bellBadgeDot: {
+    position: 'absolute',
+    top: 7,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: PALETTE.redDot,
+  },
+  avatarWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   searchBarRow: {
     flexDirection: 'row',
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-    gap: Spacing.sm,
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
   },
   inputContainer: {
     flex: 1,
+    height: 46,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.sandLight,
-    borderWidth: 1,
-    borderColor: Colors.sand,
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: 12,
-    height: 46,
+    paddingHorizontal: 14,
+    gap: 10,
+    shadowColor: '#8C6700',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
   },
   searchInput: {
     flex: 1,
-    fontSize: Typography.bodySmall,
-    color: Colors.textPrimary,
-    marginLeft: 8,
+    fontSize: 14,
+    color: '#1C1614',
+    fontWeight: '600',
   },
   filterBtn: {
     width: 46,
     height: 46,
-    backgroundColor: Colors.sandLight,
-    borderWidth: 1,
-    borderColor: Colors.sand,
-    borderRadius: BorderRadius.md,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    shadowColor: '#8C6700',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
   },
   filterBtnActive: {
-    backgroundColor: Colors.burgundy,
-    borderColor: Colors.burgundy,
+    backgroundColor: '#1C1614',
   },
   filterBadge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: Colors.dustyPink,
-    borderRadius: 8,
-    minWidth: 17,
-    height: 17,
+    top: -3,
+    right: -3,
+    backgroundColor: PALETTE.maroon,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 2,
+    paddingHorizontal: 4,
   },
   filterBadgeText: {
-    fontSize: 9.5,
+    fontSize: 10,
     fontWeight: '800',
-    color: Colors.burgundy,
+    color: '#FFFFFF',
   },
-  quickChipsBar: {
-    paddingTop: Spacing.sm,
-    paddingBottom: 2,
+  metricCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    shadowColor: '#3A271D',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+  metricCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  metricCardSubhead: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: PALETTE.textMuted,
+  },
+  activeTag: {
+    backgroundColor: PALETTE.oliveSoft,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  activeTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: PALETTE.olive,
+  },
+  gaugesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  gaugeContainer: {
+    alignItems: 'center',
+  },
+  gaugeValueText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#1C1614',
+  },
+  gaugeUnitText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: PALETTE.textMuted,
+    marginTop: 4,
+    letterSpacing: 0.3,
+  },
+  gaugeDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: '#F0ECE3',
+  },
+  scrollContent: {
+    paddingHorizontal: 18,
+    paddingTop: 16,
   },
   quickChipsContent: {
-    paddingHorizontal: Spacing.md,
-    gap: 6,
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
   },
   quickChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: Colors.sand,
-    backgroundColor: Colors.cardBg,
-    gap: 4,
-    ...Shadows.subtle,
+    borderColor: PALETTE.cardBorder,
   },
   quickChipActive: {
-    backgroundColor: Colors.burgundy,
-    borderColor: Colors.burgundy,
+    backgroundColor: PALETTE.amberHeader,
+    borderColor: PALETTE.amberHeader,
   },
   quickChipText: {
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: '600',
-    color: Colors.textSecondary,
+    color: PALETTE.textSecondary,
   },
   quickChipTextActive: {
-    color: Colors.creme,
-    fontWeight: '700',
+    color: '#1C1614',
+    fontWeight: '800',
   },
-  sortBar: {
+  resultsHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 10,
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
-  sortLabel: {
-    fontSize: Typography.caption,
+  resultsTitleText: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: PALETTE.textInk,
+    letterSpacing: 0.6,
+  },
+  clearFilterText: {
+    fontSize: 12,
     fontWeight: '700',
-    color: Colors.textSecondary,
-    marginRight: 8,
+    color: PALETTE.amberHeaderDark,
   },
-  sortChip: {
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
+  twoColumnGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  gridCard: {
+    width: GRID_CARD_WIDTH,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: Colors.sand,
-    backgroundColor: Colors.creme,
-    marginRight: 6,
+    borderColor: PALETTE.cardBorder,
+    shadowColor: '#3A271D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    marginBottom: 4,
   },
-  sortChipActive: {
-    backgroundColor: Colors.burgundy,
-    borderColor: Colors.burgundy,
+  gridPhotoWrap: {
+    width: '100%',
+    height: 140,
+    position: 'relative',
   },
-  sortChipText: {
-    fontSize: Typography.caption,
-    color: Colors.textSecondary,
-    fontWeight: '600',
+  gridPhoto: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#EAE4DA',
   },
-  sortChipTextActive: {
-    color: Colors.creme,
-    fontWeight: '700',
-  },
-  listContent: {
-    padding: Spacing.md,
-    paddingBottom: 60,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: Spacing.xl,
-  },
-  emptyIconWrap: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: Colors.dustyPinkLight,
+  gridHeartBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.dustyPink,
   },
-  emptyTitle: {
-    fontFamily: Typography.fontSerif,
-    fontSize: Typography.titleMedium,
+  gridBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: 'rgba(28, 22, 20, 0.75)',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  gridBadgeText: {
+    fontSize: 9.5,
     fontWeight: '700',
-    color: Colors.burgundy,
-    textAlign: 'center',
+    color: PALETTE.amberHeader,
   },
-  emptySubtitle: {
-    fontSize: Typography.bodySmall,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginTop: 6,
-    lineHeight: 20,
+  gridDetails: {
+    padding: 10,
   },
-  resetBtn: {
-    marginTop: Spacing.lg,
-    backgroundColor: Colors.burgundy,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: BorderRadius.md,
-  },
-  resetBtnText: {
-    color: Colors.creme,
-    fontSize: Typography.bodySmall,
+  gridName: {
+    fontSize: 13.5,
     fontWeight: '700',
+    color: PALETTE.textInk,
+    marginBottom: 2,
+  },
+  gridJob: {
+    fontSize: 11,
+    color: PALETTE.textMuted,
+  },
+  gridCity: {
+    fontSize: 10.5,
+    color: PALETTE.textMuted,
+    marginBottom: 8,
+  },
+  gridActionBtn: {
+    width: '100%',
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: PALETTE.amberHeader,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gridActionBtnText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#1C1614',
   },
 });
