@@ -54,12 +54,14 @@ const SERIF_FONT = Platform.select({ ios: 'Georgia', android: 'serif' }) || 'ser
 
 interface RelationshipManagerPortalProps {
   language: Language;
+  onToggleLanguage?: () => void;
   onBack: () => void;
   onViewProfile?: (profileId: string) => void;
 }
 
 export const RelationshipManagerPortalScreen: React.FC<RelationshipManagerPortalProps> = ({
   language,
+  onToggleLanguage,
   onBack,
   onViewProfile,
 }) => {
@@ -102,7 +104,7 @@ export const RelationshipManagerPortalScreen: React.FC<RelationshipManagerPortal
       <StatusBar barStyle="dark-content" />
       <Header
         language={language}
-        onToggleLanguage={() => {}}
+        onToggleLanguage={onToggleLanguage || (() => {})}
         showBack={true}
         onBackPress={onBack}
         title={isTa ? 'உறவு மேலாளர் போர்டல்' : 'Relationship Manager Portal'}

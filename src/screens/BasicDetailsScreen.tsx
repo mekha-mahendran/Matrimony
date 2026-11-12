@@ -17,6 +17,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { Language } from '../localization';
+import { LanguageToggle } from '../components/LanguageToggle';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -35,6 +36,7 @@ export interface BasicDetailsData {
 
 interface BasicDetailsScreenProps {
   language?: Language;
+  onToggleLanguage?: () => void;
   initialData?: Partial<BasicDetailsData>;
   onNext: (data: BasicDetailsData) => void;
   onBackPress: () => void;

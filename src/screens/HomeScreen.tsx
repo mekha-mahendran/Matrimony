@@ -42,6 +42,7 @@ import { StorageService } from '../services/storage';
 import { MatrimonyProfile } from '../types';
 import { HomeFilterModal, FilterState } from '../components/HomeFilterModal';
 import { HomeMatrimonyFeatures } from '../components/HomeMatrimonyFeatures';
+import { LanguageToggle } from '../components/LanguageToggle';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 80;
@@ -311,14 +312,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
             <Text style={styles.headerTitleText}>Home</Text>
 
-            {/* Language switch capsule */}
-            <TouchableOpacity
-              style={styles.langPill}
-              activeOpacity={0.8}
-              onPress={onToggleLanguage}
-            >
-              <Text style={styles.langPillText}>{isTa ? 'தமிழ்' : 'EN'}</Text>
-            </TouchableOpacity>
+            {/* Normal & Elegant Language switch capsule */}
+            <LanguageToggle language={language} onToggle={onToggleLanguage} size="small" />
           </View>
 
           {/* Right: Notification Capsule + Circular Search Button */}

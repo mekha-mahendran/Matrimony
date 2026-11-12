@@ -54,11 +54,13 @@ const SERIF_FONT = Platform.select({ ios: 'Georgia', android: 'serif' }) || 'ser
 
 interface OperationsManagementScreenProps {
   language: Language;
+  onToggleLanguage?: () => void;
   onBack: () => void;
 }
 
 export const OperationsManagementScreen: React.FC<OperationsManagementScreenProps> = ({
   language,
+  onToggleLanguage,
   onBack,
 }) => {
   const insets = useSafeAreaInsets();
@@ -131,7 +133,7 @@ export const OperationsManagementScreen: React.FC<OperationsManagementScreenProp
       <StatusBar barStyle="dark-content" />
       <Header
         language={language}
-        onToggleLanguage={() => {}}
+        onToggleLanguage={onToggleLanguage || (() => {})}
         showBack={true}
         onBackPress={onBack}
         title={isTa ? 'கிளை & முகவர் மேலாண்மை' : 'Operations & Agent Portal'}

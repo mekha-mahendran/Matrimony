@@ -21,6 +21,7 @@ import { Language, Translations } from '../localization';
 import { Spacing } from '../theme';
 import { CustomIcon } from './CustomIcon';
 import { GarlandLogo } from './GarlandLogo';
+import { LanguageToggle } from './LanguageToggle';
 
 /* ── Brand palette (local tokens) ─────────────────────────────────────────── */
 const C = {
@@ -115,23 +116,12 @@ export const Header: React.FC<HeaderProps> = ({
         {/* ── Right: Language pill + Admin + Notification ───────────────── */}
         <View style={styles.actionsRow}>
 
-          {/* Language switcher pill */}
-          <TouchableOpacity
-            style={styles.langPill}
-            onPress={onToggleLanguage}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.langSeg, language === 'ta' && styles.langSegActive]}>
-              <Text style={[styles.langSegText, language === 'ta' && styles.langSegTextActive]}>
-                தமிழ்
-              </Text>
-            </View>
-            <View style={[styles.langSeg, language === 'en' && styles.langSegActive]}>
-              <Text style={[styles.langSegText, language === 'en' && styles.langSegTextActive]}>
-                EN
-              </Text>
-            </View>
-          </TouchableOpacity>
+          {/* Normal & Elegant Language switcher */}
+          <LanguageToggle
+            language={language}
+            onToggle={onToggleLanguage}
+            size="small"
+          />
 
           {/* Admin shortcut button */}
           {onAdminPress ? (

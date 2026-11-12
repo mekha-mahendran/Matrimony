@@ -38,6 +38,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 import { Language } from '../localization';
 import { MatrimonyProfile } from '../types';
+import { LanguageToggle } from '../components/LanguageToggle';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const BRAND_PURPLE = '#6D53F5';
@@ -55,12 +56,14 @@ interface ChatMessage {
 interface ChatScreenProps {
   partnerProfile: MatrimonyProfile;
   language: Language;
+  onToggleLanguage?: () => void;
   onBack: () => void;
 }
 
 export const ChatScreen: React.FC<ChatScreenProps> = ({
   partnerProfile,
   language,
+  onToggleLanguage,
   onBack,
 }) => {
   const insets = useSafeAreaInsets();
@@ -203,18 +206,28 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             </View>
           </View>
 
-          {/* Circular White 3-Dots Action Button */}
-          <TouchableOpacity
-            style={styles.headerCircleBtn}
-            onPress={handleMoreOptions}
-            activeOpacity={0.8}
-          >
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill={BRAND_PURPLE}>
-              <Circle cx="12" cy="5" r="2.2" />
-              <Circle cx="12" cy="12" r="2.2" />
-              <Circle cx="12" cy="19" r="2.2" />
-            </Svg>
-          </TouchableOpacity>
+          {/* Language Toggle + 3-Dots Action Button */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {onToggleLanguage ? (
+              <LanguageToggle
+                language={language}
+                onToggle={onToggleLanguage}
+                size="small"
+                variant="glass"
+              />
+            ) : null}
+            <TouchableOpacity
+              style={styles.headerCircleBtn}
+              onPress={handleMoreOptions}
+              activeOpacity={0.8}
+            >
+              <Svg width={20} height={20} viewBox="0 0 24 24" fill={BRAND_PURPLE}>
+                <Circle cx="12" cy="5" r="2.2" />
+                <Circle cx="12" cy="12" r="2.2" />
+                <Circle cx="12" cy="19" r="2.2" />
+              </Svg>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 

@@ -18,6 +18,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import { Language } from '../localization';
 import { AuthService } from '../services/authService';
 import { StorageService } from '../services/storage';
+import { LanguageToggle } from '../components/LanguageToggle';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const BRAND_PURPLE = '#6D53F5';
@@ -88,23 +89,6 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({
     }
   };
 
-  const handleSocialAuth = (provider: 'Apple' | 'Facebook') => {
-    Alert.alert(
-      `${provider} Sign In`,
-      isTa
-        ? `${provider} மூலம் உள்நுழைகிறீர்கள்...`
-        : `Signing in with ${provider}...`,
-      [
-        {
-          text: isTa ? 'தொடர்க' : 'Continue',
-          onPress: () => {
-            onLoginSuccess();
-          },
-        },
-      ]
-    );
-  };
-
   const handleForgotPassword = () => {
     if (onForgotPasswordPress) {
       onForgotPasswordPress();
@@ -138,6 +122,22 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
+          {/* Top Bar with Language Toggle */}
+          <View style={styles.topBarRow}>
+            {onBackPress ? (
+              <TouchableOpacity onPress={onBackPress} style={styles.backCircleBtn}>
+                <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth={2}>
+                  <Path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+                </Svg>
+              </TouchableOpacity>
+            ) : (
+              <View style={{ width: 40 }} />
+            )}
+            {onToggleLanguage ? (
+              <LanguageToggle language={language} onToggle={onToggleLanguage} size="small" />
+            ) : null}
+          </View>
+
           {/* Header Title & Subtitle */}
           <View style={styles.headerContainer}>
             <Text style={styles.title}>
@@ -264,47 +264,7 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({
               )}
             </TouchableOpacity>
 
-            {/* 5. Divider: Or sign in with */}
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>
-                {isTa ? 'அல்லது உள்நுழையவும்' : 'Or sign in with'}
-              </Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* 6. Social Circular Buttons (Apple, Google, Facebook) */}
-            <View style={styles.socialRow}>
-              {/* Apple */}
-              <TouchableOpacity
-                style={styles.socialBtn}
-                onPress={() => handleSocialAuth('Apple')}
-                activeOpacity={0.8}
-              >
-                <Svg width={22} height={24} viewBox="0 0 170 170" fill="none">
-                  <Path
-                    d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.69-3.04-7.69-7.85-12-14.43-6.42-9.79-11.43-20.73-15.04-32.84-3.61-12.1-5.42-23.75-5.42-34.93 0-14.79 3.65-27.13 10.96-37.03 7.3-9.9 16.48-14.99 27.54-15.28 5.48 0 11.45 1.55 17.89 4.66 6.44 3.1 10.42 4.71 11.96 4.81 1.94-.21 6.13-1.89 12.56-5.03 6.43-3.14 12.08-4.56 16.94-4.27 12.56.78 22.84 5.39 30.82 13.82-10.99 6.64-16.36 15.69-16.12 27.15.24 9.17 3.73 16.93 10.48 23.27 6.75 6.34 14.83 10.05 24.23 11.13-2.12 6.54-4.66 13.06-7.62 19.57zM119.22 33.58c0-7.36 2.66-14.28 7.97-20.76 5.31-6.48 11.83-10.75 19.57-12.82.88 7.22-1.42 14.21-6.9 20.97-5.48 6.76-12.36 11.12-20.64 12.61z"
-                    fill="#000000"
-                  />
-                </Svg>
-              </TouchableOpacity>
-
-              {/* Facebook */}
-              <TouchableOpacity
-                style={styles.socialBtn}
-                onPress={() => handleSocialAuth('Facebook')}
-                activeOpacity={0.8}
-              >
-                <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-                  <Path
-                    d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
-                    fill="#1877F2"
-                  />
-                </Svg>
-              </TouchableOpacity>
-            </View>
-
-            {/* 7. Footer: Don't have an account? Sign Up */}
+            {/* 5. Footer: Don't have an account? Sign Up */}
             <View style={styles.footerRow}>
               <Text style={styles.footerText}>
                 {isTa ? 'கணக்கு இல்லையா? ' : "Don't have an account? "}
@@ -341,6 +301,21 @@ const styles = StyleSheet.create({
   },
 
   /* Header */
+  topBarRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    width: '100%',
+  },
+  backCircleBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   headerContainer: {
     alignItems: 'center',
     marginBottom: 32,
@@ -453,53 +428,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  /* Divider */
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 32,
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  dividerText: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    marginHorizontal: 12,
-  },
-
-  /* Social Icons */
-  socialRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 18,
-  },
-  socialBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-
   /* Footer */
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 32,
+    marginTop: 28,
     marginBottom: 8,
   },
   footerText: {

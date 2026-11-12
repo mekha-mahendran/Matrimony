@@ -39,6 +39,7 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { Language, Translations } from '../localization';
 import { StorageService } from '../services/storage';
 import { CurrentUser, MatrimonyProfile, PoruthamResult } from '../types';
+import { LanguageToggle } from '../components/LanguageToggle';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const BRAND_PURPLE = '#6D53F5';
@@ -46,6 +47,7 @@ const BRAND_PURPLE = '#6D53F5';
 interface ProfileDetailProps {
   profile: MatrimonyProfile;
   language: Language;
+  onToggleLanguage?: () => void;
   onBack: () => void;
   onViewHoroscopePorutham?: (porutham: PoruthamResult) => void;
   onUpgradeMembership?: () => void;
@@ -55,6 +57,7 @@ interface ProfileDetailProps {
 export const ProfileDetailScreen: React.FC<ProfileDetailProps> = ({
   profile,
   language,
+  onToggleLanguage,
   onBack,
   onChatPress,
 }) => {
@@ -215,8 +218,16 @@ export const ProfileDetailScreen: React.FC<ProfileDetailProps> = ({
         <View style={styles.heroContainer}>
           <Image source={{ uri: activePhoto }} style={styles.heroImage} resizeMode="cover" />
 
-          {/* Distance Badge on top right of Hero */}
+          {/* Distance & Language Toggle Badge on top right of Hero */}
           <View style={[styles.distanceBadgeWrap, { top: Math.max(insets.top + 8, 20) }]}>
+            {onToggleLanguage ? (
+              <LanguageToggle
+                language={language}
+                onToggle={onToggleLanguage}
+                size="small"
+                variant="glass"
+              />
+            ) : null}
             <View style={styles.distanceBadge}>
               <Text style={styles.distanceText}>{distance}</Text>
             </View>
@@ -451,6 +462,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   backButton: {
     width: 44,
