@@ -834,6 +834,44 @@ function ManamaalaiApp() {
                 lastActive: new Date().toISOString(),
               };
 
+              try {
+                await AuthService.registerUserWithBackend({
+                  name: registeredName,
+                  email: registeredEmail,
+                  password: registeredPassword,
+                  phone: registeredMobile,
+                  gender: profileGender,
+                  createdFor: createdForMap[registeredCreatedFor] || 'self',
+                  age: registeredAge,
+                  dateOfBirth: registeredDob,
+                  height: registeredHeight,
+                  maritalStatus: maritalStatusMap[registeredMaritalStatus] || 'never_married',
+                  religion: registeredReligion || 'Hindu',
+                  caste: registeredCommunity || 'Kongu Vellalar',
+                  subCaste: registeredSubCommunity || '',
+                  star: registeredNakshatra,
+                  rasi: registeredRaasi,
+                  dosham: registeredDosham,
+                  education: registeredHighestQualification,
+                  college: registeredCollege,
+                  profession: registeredOccupation,
+                  company: registeredCompany,
+                  annualIncome: registeredAnnualIncome,
+                  employedIn: registeredEmployedIn,
+                  currentCity: registeredCurrentCity,
+                  nativeDistrict: registeredNativeDistrict,
+                  diet: registeredDiet,
+                  smoking: registeredSmoking === 'Yes',
+                  drinking: registeredDrinking === 'Yes',
+                  hobbies: registeredHobbies,
+                  aboutMe: registeredAboutMe,
+                  photos: data.photos,
+                  partnerPreferences: newProfile.partnerPreferences,
+                });
+              } catch (regErr) {
+                console.log('Registered locally or pending backend sync:', regErr);
+              }
+
               await StorageService.saveProfile(newProfile);
               await StorageService.updateCurrentUser({
                 email: registeredEmail,
