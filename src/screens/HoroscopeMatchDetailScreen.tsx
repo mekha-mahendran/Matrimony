@@ -22,12 +22,14 @@ import { PoruthamResult } from '../types';
 interface HoroscopeDetailProps {
   porutham: PoruthamResult;
   language: Language;
+  onToggleLanguage?: () => void;
   onBack: () => void;
 }
 
 export const HoroscopeMatchDetailScreen: React.FC<HoroscopeDetailProps> = ({
   porutham,
   language,
+  onToggleLanguage,
   onBack,
 }) => {
   const t = Translations[language];
@@ -37,7 +39,7 @@ export const HoroscopeMatchDetailScreen: React.FC<HoroscopeDetailProps> = ({
       <StatusBar barStyle="dark-content" />
       <Header
         language={language}
-        onToggleLanguage={() => {}}
+        onToggleLanguage={onToggleLanguage || (() => {})}
         showBack={true}
         onBackPress={onBack}
         title="10-Porutham Match Report"

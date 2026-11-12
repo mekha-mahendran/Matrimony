@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CustomIcon } from '../components/CustomIcon';
+import { LanguageToggle } from '../components/LanguageToggle';
 import { Language, Translations } from '../localization';
 import { StorageService } from '../services/storage';
 import {
@@ -32,6 +33,7 @@ const { width, height } = Dimensions.get('window');
 
 interface DailyRecommendationsScreenProps {
   language: Language;
+  onToggleLanguage?: () => void;
   onBack: () => void;
   onProfilePress?: (profile: MatrimonyProfile) => void;
   onUpgradeMembership?: () => void;
@@ -40,6 +42,7 @@ interface DailyRecommendationsScreenProps {
 
 export const DailyRecommendationsScreen: React.FC<DailyRecommendationsScreenProps> = ({
   language,
+  onToggleLanguage,
   onBack,
   onProfilePress,
   onUpgradeMembership,
@@ -384,6 +387,16 @@ export const DailyRecommendationsScreen: React.FC<DailyRecommendationsScreenProp
             </Text>
           </Text>
         </View>
+
+        {/* Language Switcher */}
+        {onToggleLanguage ? (
+          <LanguageToggle
+            language={language}
+            onToggle={onToggleLanguage}
+            size="small"
+            style={{ marginRight: 6 }}
+          />
+        ) : null}
 
         {/* Gender View Switcher */}
         <TouchableOpacity

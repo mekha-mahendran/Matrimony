@@ -22,12 +22,14 @@ import { NotificationItem } from '../types';
 
 interface NotificationsScreenProps {
   language: Language;
+  onToggleLanguage?: () => void;
   onBack: () => void;
   onSelectNotification?: (item: NotificationItem) => void;
 }
 
 export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({
   language,
+  onToggleLanguage,
   onBack,
   onSelectNotification,
 }) => {
@@ -67,7 +69,7 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({
       <StatusBar barStyle="dark-content" />
       <Header
         language={language}
-        onToggleLanguage={() => {}}
+        onToggleLanguage={onToggleLanguage || (() => {})}
         showBack={true}
         onBackPress={onBack}
         title="Notifications"

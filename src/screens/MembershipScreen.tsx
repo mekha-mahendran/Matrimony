@@ -34,6 +34,7 @@ import { Language } from '../localization';
 import { StorageService } from '../services/storage';
 import { AddCardScreen, CardDetails } from './AddCardScreen';
 import { PaymentSuccessScreen } from './PaymentSuccessScreen';
+import { LanguageToggle } from '../components/LanguageToggle';
 
 const BRAND_PURPLE = '#6D53F5';
 
@@ -48,11 +49,13 @@ interface SavedCard {
 
 interface MembershipScreenProps {
   language: Language;
+  onToggleLanguage?: () => void;
   onBack: () => void;
 }
 
 export const MembershipScreen: React.FC<MembershipScreenProps> = ({
   language,
+  onToggleLanguage,
   onBack,
 }) => {
   const insets = useSafeAreaInsets();
@@ -157,7 +160,11 @@ export const MembershipScreen: React.FC<MembershipScreenProps> = ({
           {isTa ? 'கட்டண முறைகள்' : 'Payment Methods'}
         </Text>
 
-        <View style={{ width: 44 }} />
+        {onToggleLanguage ? (
+          <LanguageToggle language={language} onToggle={onToggleLanguage} size="small" />
+        ) : (
+          <View style={{ width: 44 }} />
+        )}
       </View>
 
       <ScrollView

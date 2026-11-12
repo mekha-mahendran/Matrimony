@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { Language } from '../localization';
+import { LanguageToggle } from '../components/LanguageToggle';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const BRAND_PURPLE = '#6D53F5';
@@ -209,6 +210,7 @@ const INTERESTS_DATA: InterestItem[] = [
 
 interface InterestsSelectionScreenProps {
   language?: Language;
+  onToggleLanguage?: () => void;
   initialInterests?: string[];
   onNext: (selected: string[]) => void;
   onBackPress: () => void;
@@ -216,6 +218,7 @@ interface InterestsSelectionScreenProps {
 
 export const InterestsSelectionScreen: React.FC<InterestsSelectionScreenProps> = ({
   language = 'en',
+  onToggleLanguage,
   initialInterests = ['gaming', 'photography', 'arts', 'football', 'business'],
   onNext,
   onBackPress,
@@ -272,8 +275,13 @@ export const InterestsSelectionScreen: React.FC<InterestsSelectionScreenProps> =
           <View style={styles.progressFill} />
         </View>
 
-        {/* Step Counter Indicator */}
-        <Text style={styles.stepIndicator}>3/4</Text>
+        {/* Step Counter Indicator & Language Toggle */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={styles.stepIndicator}>3/4</Text>
+          {onToggleLanguage ? (
+            <LanguageToggle language={language} onToggle={onToggleLanguage} size="small" />
+          ) : null}
+        </View>
       </View>
 
       <ScrollView

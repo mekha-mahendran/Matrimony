@@ -12,12 +12,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Language } from '../localization';
+import { LanguageToggle } from '../components/LanguageToggle';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const BRAND_PURPLE = '#6D53F5';
 
 interface GenderSelectionScreenProps {
   language?: Language;
+  onToggleLanguage?: () => void;
   initialGender?: 'male' | 'female';
   onNext: (gender: 'male' | 'female') => void;
   onBackPress: () => void;
@@ -25,6 +27,7 @@ interface GenderSelectionScreenProps {
 
 export const GenderSelectionScreen: React.FC<GenderSelectionScreenProps> = ({
   language = 'en',
+  onToggleLanguage,
   initialGender = 'male',
   onNext,
   onBackPress,
@@ -62,8 +65,13 @@ export const GenderSelectionScreen: React.FC<GenderSelectionScreenProps> = ({
           <View style={styles.progressFill} />
         </View>
 
-        {/* Step Counter Indicator */}
-        <Text style={styles.stepIndicator}>1/5</Text>
+        {/* Step Counter Indicator & Language Toggle */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={styles.stepIndicator}>1/5</Text>
+          {onToggleLanguage ? (
+            <LanguageToggle language={language} onToggle={onToggleLanguage} size="small" />
+          ) : null}
+        </View>
       </View>
 
       {/* Main Content Area */}

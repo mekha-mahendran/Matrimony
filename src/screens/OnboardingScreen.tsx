@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { Language } from '../localization';
+import { LanguageToggle } from '../components/LanguageToggle';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -192,9 +193,13 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      {/* ── Top Bar: Skip button at top-right ── */}
+      {/* ── Top Bar: Language Toggle on left, Skip button on right ── */}
       <View style={[styles.topBar, { paddingTop: Math.max(insets.top + 6, 16) }]}>
-        <View style={styles.topSpacer} />
+        {onToggleLanguage ? (
+          <LanguageToggle language={language} onToggle={onToggleLanguage} size="small" />
+        ) : (
+          <View style={styles.topSpacer} />
+        )}
         <TouchableOpacity
           onPress={onSkip}
           hitSlop={{ top: 14, bottom: 14, left: 18, right: 18 }}

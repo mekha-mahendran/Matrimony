@@ -23,6 +23,7 @@ import { MatrimonyProfile } from '../types';
 
 interface AdminScreenProps {
   language: Language;
+  onToggleLanguage?: () => void;
   onBack: () => void;
   onViewProfile: (profile: MatrimonyProfile) => void;
   onOperationsPress?: () => void;
@@ -30,6 +31,7 @@ interface AdminScreenProps {
 
 export const AdminDashboardScreen: React.FC<AdminScreenProps> = ({
   language,
+  onToggleLanguage,
   onBack,
   onViewProfile,
   onOperationsPress,
@@ -84,7 +86,7 @@ export const AdminDashboardScreen: React.FC<AdminScreenProps> = ({
       <StatusBar barStyle="dark-content" />
       <Header
         language={language}
-        onToggleLanguage={() => {}}
+        onToggleLanguage={onToggleLanguage || (() => {})}
         showBack={true}
         onBackPress={onBack}
         title={t.adminPortal}

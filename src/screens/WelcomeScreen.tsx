@@ -25,15 +25,15 @@ const SOFT_PEACH = '#FCD8D4';
 const CANARY_YELLOW = '#FFE853';
 
 /**
- * Custom Heart-Shaped Switch Language Toggle
- * Directly inspired by reference design with sliding circular knob across heart lobes.
+ * Normal & Elegant Segmented Language Switcher (EN | தமிழ்)
+ * Clean, modern sliding pill toggle with smooth spring animation.
  */
-interface HeartLanguageToggleProps {
+interface ElegantLanguageToggleProps {
   language: Language;
   onToggle: () => void;
 }
 
-const HeartLanguageToggle: React.FC<HeartLanguageToggleProps> = ({
+const ElegantLanguageToggle: React.FC<ElegantLanguageToggleProps> = ({
   language,
   onToggle,
 }) => {
@@ -43,58 +43,50 @@ const HeartLanguageToggle: React.FC<HeartLanguageToggleProps> = ({
   useEffect(() => {
     Animated.spring(animValue, {
       toValue: isTa ? 1 : 0,
-      friction: 6,
+      friction: 7,
       tension: 50,
       useNativeDriver: true,
     }).start();
   }, [isTa]);
 
-  // Horizontal travel distance across the two heart lobes
-  const thumbTranslateX = animValue.interpolate({
+  // Horizontal glide from EN (3px) to தமிழ் (49px)
+  const pillTranslateX = animValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 21],
+    outputRange: [3, 49],
   });
 
   return (
     <TouchableOpacity
-      style={styles.heartToggleContainer}
+      style={styles.langSegmentTrack}
       onPress={onToggle}
-      activeOpacity={0.82}
-      accessibilityRole="switch"
-      accessibilityState={{ checked: isTa }}
-      accessibilityLabel="Toggle English or Tamil language"
+      activeOpacity={0.88}
+      accessibilityRole="button"
+      accessibilityLabel={isTa ? 'ஆங்கிலத்திற்கு மாற்றவும்' : 'Switch to Tamil'}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
-      <Text style={[styles.langLabel, !isTa && styles.langLabelActive]}>
-        EN
-      </Text>
+      {/* Sliding Active Purple Capsule */}
+      <Animated.View
+        style={[
+          styles.langActivePill,
+          {
+            transform: [{ translateX: pillTranslateX }],
+          },
+        ]}
+      />
 
-      <View style={styles.heartSwitchFrame}>
-        {/* Heart shaped track directly matching reference toggle button */}
-        <Svg width={52} height={34} viewBox="0 0 54 36" fill="none">
-          <Path
-            d="M 27 6.5 C 30.5 1.5, 36.5 0.5, 41.5 0.8 C 47.5 1, 53 5.5, 53 12.5 C 53 20.5, 43 28.5, 27 35.5 C 11 28.5, 1 20.5, 1 12.5 C 1 5.5, 6.5 1, 12.5 0.8 C 17.5 0.5, 23.5 1.5, 27 6.5 Z"
-            fill={isTa ? '#6D53F5' : '#FFFFFF'}
-            stroke={isTa ? '#6D53F5' : '#C8C4D6'}
-            strokeWidth="2.5"
-            strokeLinejoin="round"
-          />
-        </Svg>
-
-        {/* Sliding circular white thumb with drop shadow */}
-        <Animated.View
-          style={[
-            styles.heartThumb,
-            {
-              transform: [{ translateX: thumbTranslateX }],
-            },
-          ]}
-        />
+      {/* English Label */}
+      <View style={styles.langSegmentItem}>
+        <Text style={[styles.langSegmentText, !isTa ? styles.langSegmentTextActive : styles.langSegmentTextInactive]}>
+          EN
+        </Text>
       </View>
 
-      <Text style={[styles.langLabel, isTa && styles.langLabelActive]}>
-        தமிழ்
-      </Text>
+      {/* Tamil Label */}
+      <View style={styles.langSegmentItem}>
+        <Text style={[styles.langSegmentText, isTa ? styles.langSegmentTextActive : styles.langSegmentTextInactive]}>
+          தமிழ்
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 };
@@ -141,8 +133,8 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           </View>
         </View>
 
-        {/* Heart-Shaped Switch Language Toggle (Matches User Reference Image) */}
-        <HeartLanguageToggle language={language} onToggle={onToggleLanguage} />
+        {/* Normal & Elegant Language Toggle (EN | தமிழ்) */}
+        <ElegantLanguageToggle language={language} onToggle={onToggleLanguage} />
       </View>
 
       <ScrollView
@@ -344,47 +336,51 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
 
-  // ── Heart-Shaped Switch Language Toggle (Matches User Reference Image) ──
-  heartToggleContainer: {
+  // ── Normal & Elegant Segmented Language Switcher ──
+  langSegmentTrack: {
+    width: 96,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F8',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F7F6FC',
-    borderRadius: 24,
-    paddingVertical: 3,
-    paddingHorizontal: 8,
+    padding: 3,
     borderWidth: 1,
-    borderColor: '#E8E5F4',
+    borderColor: '#E5E3F0',
+    position: 'relative',
   },
-  langLabel: {
+  langActivePill: {
+    position: 'absolute',
+    top: 3,
+    left: 0,
+    width: 44,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: BRAND_PURPLE,
+    shadowColor: BRAND_PURPLE,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.28,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  langSegmentItem: {
+    width: 45,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
+  langSegmentText: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#8E8B9E',
-    paddingHorizontal: 5,
+    fontFamily: Platform.select({ ios: 'System', android: 'sans-serif-medium' }),
   },
-  langLabelActive: {
-    color: BRAND_PURPLE,
+  langSegmentTextActive: {
+    color: '#FFFFFF',
     fontWeight: '800',
   },
-  heartSwitchFrame: {
-    width: 52,
-    height: 34,
-    position: 'relative',
-    justifyContent: 'center',
-    marginHorizontal: 2,
-  },
-  heartThumb: {
-    position: 'absolute',
-    top: 5,
-    left: 4,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4.5,
-    elevation: 5,
+  langSegmentTextInactive: {
+    color: '#6B7280',
+    fontWeight: '600',
   },
 
   // ── Scroll Content ──

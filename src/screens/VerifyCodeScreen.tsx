@@ -16,12 +16,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { Language } from '../localization';
+import { LanguageToggle } from '../components/LanguageToggle';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const BRAND_PURPLE = '#6D53F5';
 
 interface VerifyCodeScreenProps {
   language?: Language;
+  onToggleLanguage?: () => void;
   email?: string;
   onVerifySuccess: () => void;
   onBackPress: () => void;
@@ -29,6 +31,7 @@ interface VerifyCodeScreenProps {
 
 export const VerifyCodeScreen: React.FC<VerifyCodeScreenProps> = ({
   language = 'en',
+  onToggleLanguage,
   email = 'example@email.com',
   onVerifySuccess,
   onBackPress,
@@ -143,7 +146,7 @@ export const VerifyCodeScreen: React.FC<VerifyCodeScreenProps> = ({
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Top Header Row with Circular Back Button */}
+      {/* Top Header Row with Circular Back Button & Language Toggle */}
       <View style={[styles.topBar, { paddingTop: Math.max(insets.top + 10, 20) }]}>
         <TouchableOpacity
           style={styles.backButton}
@@ -155,6 +158,9 @@ export const VerifyCodeScreen: React.FC<VerifyCodeScreenProps> = ({
             <Path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
           </Svg>
         </TouchableOpacity>
+        {onToggleLanguage ? (
+          <LanguageToggle language={language} onToggle={onToggleLanguage} size="small" />
+        ) : null}
       </View>
 
       <KeyboardAvoidingView
@@ -257,6 +263,9 @@ const styles = StyleSheet.create({
   topBar: {
     paddingHorizontal: 24,
     paddingBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   backButton: {
     width: 44,

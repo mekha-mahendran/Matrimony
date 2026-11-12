@@ -27,6 +27,7 @@ import { MatrimonyProfile } from '../types';
 interface EditProfileScreenProps {
   profile: MatrimonyProfile;
   language: Language;
+  onToggleLanguage?: () => void;
   onBack: () => void;
   onSaved: (updated: MatrimonyProfile) => void;
 }
@@ -34,6 +35,7 @@ interface EditProfileScreenProps {
 export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
   profile,
   language,
+  onToggleLanguage,
   onBack,
   onSaved,
 }) => {
@@ -81,7 +83,7 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({
       <StatusBar barStyle="dark-content" />
       <Header
         language={language}
-        onToggleLanguage={() => {}}
+        onToggleLanguage={onToggleLanguage || (() => {})}
         showBack={true}
         onBackPress={onBack}
         title="Edit Profile"

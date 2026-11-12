@@ -52,12 +52,14 @@ const SERIF_FONT = Platform.select({ ios: 'Georgia', android: 'serif' }) || 'ser
 
 interface FamilyDecisionCircleScreenProps {
   language: Language;
+  onToggleLanguage?: () => void;
   onBack: () => void;
   onViewProfile?: (profile: MatrimonyProfile) => void;
 }
 
 export const FamilyDecisionCircleScreen: React.FC<FamilyDecisionCircleScreenProps> = ({
   language,
+  onToggleLanguage,
   onBack,
   onViewProfile,
 }) => {
@@ -124,7 +126,7 @@ export const FamilyDecisionCircleScreen: React.FC<FamilyDecisionCircleScreenProp
       <StatusBar barStyle="dark-content" />
       <Header
         language={language}
-        onToggleLanguage={() => {}}
+        onToggleLanguage={onToggleLanguage || (() => {})}
         showBack={true}
         onBackPress={onBack}
         title={isTa ? 'குடும்ப முடிவுக் குழு' : 'Family Decision Circle'}

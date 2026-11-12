@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Language, Translations } from '../localization';
 import { StorageService } from '../services/storage';
+import { LanguageToggle } from '../components/LanguageToggle';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -142,6 +143,22 @@ export const CreateAccountScreen: React.FC<CreateAccountScreenProps> = ({
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
+          {/* Top Bar with Back and Language Switcher */}
+          <View style={styles.topBarRow}>
+            {onBackPress ? (
+              <TouchableOpacity onPress={onBackPress} style={styles.backCircleBtn}>
+                <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth={2}>
+                  <Path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+                </Svg>
+              </TouchableOpacity>
+            ) : (
+              <View style={{ width: 40 }} />
+            )}
+            {onToggleLanguage ? (
+              <LanguageToggle language={language} onToggle={onToggleLanguage} size="small" />
+            ) : null}
+          </View>
+
           {/* Header Title & Subtitle */}
           <View style={styles.headerContainer}>
             <Text style={styles.title}>
@@ -405,6 +422,21 @@ const styles = StyleSheet.create({
   },
 
   /* Header */
+  topBarRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    width: '100%',
+  },
+  backCircleBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   headerContainer: {
     alignItems: 'center',
     marginBottom: 28,

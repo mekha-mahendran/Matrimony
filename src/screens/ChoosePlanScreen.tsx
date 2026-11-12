@@ -40,6 +40,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Language } from '../localization';
+import { LanguageToggle } from '../components/LanguageToggle';
 
 const BRAND_PURPLE = '#6D53F5';
 
@@ -55,12 +56,14 @@ export interface PlanItem {
 
 interface ChoosePlanScreenProps {
   language?: Language;
+  onToggleLanguage?: () => void;
   onBack: () => void;
   onSelectPlan: (plan: PlanItem) => void;
 }
 
 export const ChoosePlanScreen: React.FC<ChoosePlanScreenProps> = ({
   language,
+  onToggleLanguage,
   onBack,
   onSelectPlan,
 }) => {
@@ -150,7 +153,11 @@ export const ChoosePlanScreen: React.FC<ChoosePlanScreenProps> = ({
           {isTa ? 'உங்கள் திட்டத்தைத் தேர்வுசெய்க' : 'Choose Your Plan'}
         </Text>
 
-        <View style={{ width: 44 }} />
+        {onToggleLanguage ? (
+          <LanguageToggle language={language || 'en'} onToggle={onToggleLanguage} size="small" />
+        ) : (
+          <View style={{ width: 44 }} />
+        )}
       </View>
 
       <ScrollView
