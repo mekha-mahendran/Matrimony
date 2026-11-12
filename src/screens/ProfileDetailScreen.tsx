@@ -191,6 +191,18 @@ export const ProfileDetailScreen: React.FC<ProfileDetailProps> = ({
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
+      {/* Fixed Top-Left Back Button (Visible when scrolled) */}
+      <TouchableOpacity
+        style={[styles.floatingBackButton, { top: Math.max(insets.top + 8, 20) }]}
+        onPress={onBack}
+        activeOpacity={0.8}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+      >
+        <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#18181D" strokeWidth={2.5}>
+          <Path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+        </Svg>
+      </TouchableOpacity>
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
@@ -199,25 +211,12 @@ export const ProfileDetailScreen: React.FC<ProfileDetailProps> = ({
         ]}
         bounces={false}
       >
-        {/* ── 1. Hero Photo Header ───────────────────────────────────── */}
+        {/* ─── 1. Hero Photo Header ────────────────────────────────────────── */}
         <View style={styles.heroContainer}>
           <Image source={{ uri: activePhoto }} style={styles.heroImage} resizeMode="cover" />
 
-          {/* Top Floating Controls */}
-          <View style={[styles.topControlsRow, { paddingTop: Math.max(insets.top + 8, 20) }]}>
-            {/* Back Button */}
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={onBack}
-              activeOpacity={0.8}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#18181D" strokeWidth={2.5}>
-                <Path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
-              </Svg>
-            </TouchableOpacity>
-
-            {/* Distance Badge */}
+          {/* Distance Badge on top right of Hero */}
+          <View style={[styles.distanceBadgeWrap, { top: Math.max(insets.top + 8, 20) }]}>
             <View style={styles.distanceBadge}>
               <Text style={styles.distanceText}>{distance}</Text>
             </View>
@@ -432,6 +431,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     zIndex: 10,
   },
+  floatingBackButton: {
+    position: 'absolute',
+    left: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 99,
+  },
+  distanceBadgeWrap: {
+    position: 'absolute',
+    right: 20,
+    zIndex: 10,
+  },
   backButton: {
     width: 44,
     height: 44,
@@ -590,7 +610,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: BRAND_PURPLE,
-    textDecorationLine: 'underline',
+    // clean style
   },
 
   /* Interests Chips */

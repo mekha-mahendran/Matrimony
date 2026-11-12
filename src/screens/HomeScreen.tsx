@@ -1,29 +1,32 @@
 /**
- * Manamaalai Matrimony (மணமாலை) — Modern Swipe Discovery & Card Matching Screen
+ * Manamaalai Matrimony (மணமாலை) — Modern Social-Matrimonial Feed
  *
- * Implements the exact design from the reference screenshots:
- * - Location Header with dropdown & top-right filter button
- * - Horizontal Stories / Avatar row (Add + Jenny, Leslie, Bessie, etc. with purple rings)
- * - Tinder-Style Swipeable Cards with PanResponder:
- *     - Smooth rotation and momentum drag
- *     - Dynamic stamp overlays: ✕ on swipe left, ♥ on swipe right
- *     - Distance badge: "12.6 km away"
- *     - Name with golden verified badge & location
- * - 3 Floating Action Buttons below card:
- *     - White circle with purple ✕ (Pass / Dislike)
- *     - Royal Purple circle with white Heart ♥ (Like / Express Interest)
- *     - Golden Yellow circle with Star ★ (Super Like / Shortlist)
+ * Implements the exact UI reference design (media_1794399256147_d8d6509a.png):
+ * 1. Sky-Blue Top Gradient Header:
+ *    - Circular Hamburger Menu button (☰)
+ *    - Bold "Home" Title with subtle Tamil/English switch
+ *    - White capsule notification badge (🔔 3)
+ *    - White circular search button (🔍)
+ * 2. Horizontal Stories Bar:
+ *    - "Your Story" vertical card with user avatar & bright blue "+" icon overlay
+ *    - Candidate Story cards with full photo & mini avatar badge in top-left corner
+ * 3. Varan Showcase Card (Centerpiece):
+ *    - Header: Avatar, Name + blue verified badge (✔), 3 mins ago • Location • 🌐, and Relationship pill (Brother, Daughter, Self)
+ *    - 3-Photo Fanned Showcase: Angled left/right photos with prominent center card & tap-to-cycle
+ *    - Clean bio description text paragraph
+ *    - Matrimonial chips (Caste, Rasi/Nakshatram, Career, District)
+ *    - Action Bar: [♥ 2.3k  💬 2.1k] capsule, [💬 Comments here / 💌 Send Interest] capsule, and circular [⋮] menu
+ *    - Interactive gesture swiping (PanResponder) for Like / Pass
+ * 4. Rich Matrimonial Features below (Dasa Porutham, Community Hubs, District Directory)
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
   Dimensions,
   Image,
-  Modal,
   PanResponder,
-  Platform,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -32,17 +35,18 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { Language } from '../localization';
 import { INITIAL_PROFILES } from '../data/mockProfiles';
 import { StorageService } from '../services/storage';
-import { CurrentUser, MatrimonyProfile } from '../types';
+import { MatrimonyProfile } from '../types';
+import { HomeFilterModal, FilterState } from '../components/HomeFilterModal';
+import { HomeMatrimonyFeatures } from '../components/HomeMatrimonyFeatures';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 80;
-const BRAND_PURPLE = '#6D53F5';
 
-interface HomeScreenProps {
+export interface HomeScreenProps {
   language: Language;
   onToggleLanguage: () => void;
   onNotificationPress: () => void;
@@ -56,231 +60,93 @@ interface HomeScreenProps {
   onViewHoroscopePorutham?: (porutham: any) => void;
   onFamilyCirclePress?: () => void;
   onRelationshipManagerPress?: () => void;
-  unreadCount: number;
-  isAdmin: boolean;
+  unreadCount?: number;
+  isAdmin?: boolean;
 }
-
-// Sample story avatars matching reference screenshot
-const STORIES_DATA = [
-  { id: '1', name: 'Jenny', image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80' },
-  { id: '2', name: 'Leslie', image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80' },
-  { id: '3', name: 'Bessie', image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80' },
-  { id: '4', name: 'Jean', image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=300&q=80' },
-  { id: '5', name: 'Ananya', image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=300&q=80' },
-  { id: '6', name: 'Priya', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80' },
-];
-
-// Curated profiles matching the screenshot visual aesthetic
-const DISCOVERY_PROFILES: (Partial<MatrimonyProfile> & { distance: string })[] = [
-  {
-    id: 'disc_1',
-    name: 'Arlene McCoy',
-    age: 25,
-    gender: 'bride',
-    currentCity: 'New York',
-    currentCountry: 'USA',
-    photos: [
-      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
-    ],
-    distance: '12.6 km away',
-    educationCareer: {
-      qualification: 'MBA Marketing',
-      institution: 'Stern School of Business',
-      occupation: 'Brand Strategist',
-      employer: 'Ogilvy',
-      annualIncome: '$105,000 / yr',
-      workLocation: 'New York, USA',
-    },
-  },
-  {
-    id: 'disc_2',
-    name: 'Leslie Alexander',
-    age: 24,
-    gender: 'bride',
-    currentCity: 'New York',
-    currentCountry: 'USA',
-    photos: [
-      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80',
-    ],
-    distance: '9.4 km away',
-    educationCareer: {
-      qualification: 'M.S. Computer Science',
-      institution: 'Columbia University',
-      occupation: 'Software Engineer',
-      employer: 'Tech Innovations',
-      annualIncome: '$120,000 / yr',
-      workLocation: 'New York, USA',
-    },
-  },
-  {
-    id: 'disc_3',
-    name: 'Marvin McKinney',
-    age: 26,
-    gender: 'bride',
-    currentCity: 'New York',
-    currentCountry: 'USA',
-    photos: [
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80',
-    ],
-    distance: '12.6 km away',
-    educationCareer: {
-      qualification: 'B.Des / Fashion & Arts',
-      institution: 'NYU Arts',
-      occupation: 'Creative Director',
-      employer: 'Design Studio',
-      annualIncome: '$95,000 / yr',
-      workLocation: 'New York, USA',
-    },
-  },
-  {
-    id: 'disc_4',
-    name: 'Jenny Wilson',
-    age: 23,
-    gender: 'bride',
-    currentCity: 'New York',
-    currentCountry: 'USA',
-    photos: [
-      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80',
-    ],
-    distance: '15.2 km away',
-    educationCareer: {
-      qualification: 'B.Sc Architecture',
-      institution: 'Pratt Institute',
-      occupation: 'Architect',
-      employer: 'Studio One',
-      annualIncome: '$90,000 / yr',
-      workLocation: 'New York, USA',
-    },
-  },
-  {
-    id: 'disc_5',
-    name: 'Bessie Cooper',
-    age: 25,
-    gender: 'bride',
-    currentCity: 'New York',
-    currentCountry: 'USA',
-    photos: [
-      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80',
-    ],
-    distance: '6.8 km away',
-    educationCareer: {
-      qualification: 'B.Com / Finance',
-      institution: 'NYU Stern',
-      occupation: 'Financial Analyst',
-      employer: 'Goldman Sachs',
-      annualIncome: '$110,000 / yr',
-      workLocation: 'New York, USA',
-    },
-  },
-];
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   language,
-  onProfilePress,
+  onToggleLanguage,
   onNotificationPress,
   onAdminPress,
-  unreadCount,
+  onProfilePress,
+  onSearchPress,
+  onMembershipPress,
+  onInterestsTabPress,
+  onChatPress,
+  onDailyRecommendationsPress,
+  onViewHoroscopePorutham,
+  onFamilyCirclePress,
+  onRelationshipManagerPress,
+  unreadCount = 0,
+  isAdmin = false,
 }) => {
   const insets = useSafeAreaInsets();
   const isTa = language === 'ta';
 
-  // Location selector state
-  const [selectedLocation, setSelectedLocation] = useState('New York, USA');
-  const [showLocationModal, setShowLocationModal] = useState(false);
-  const [showFilterModal, setShowFilterModal] = useState(false);
-
-  // Cards deck state
-  const [profilesList, setProfilesList] = useState<any[]>(DISCOVERY_PROFILES);
+  // State
+  const [profilesList, setProfilesList] = useState<MatrimonyProfile[]>(INITIAL_PROFILES);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const [likedProfiles, setLikedProfiles] = useState<Record<string, boolean>>({});
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState('Chennai, Tamil Nadu');
 
-  // Pan animation values for swipe card
+  // Swipe animation values
   const position = useRef(new Animated.ValueXY()).current;
+  const panStartTimeRef = useRef(0);
 
-  // Initialize and merge mockProfiles from database
-  useEffect(() => {
-    async function loadData() {
-      const stored = await StorageService.getAllProfiles();
-      if (stored && stored.length > 0) {
-        const mapped = stored.slice(0, 10).map((p: MatrimonyProfile, idx: number) => ({
-          ...p,
-          distance: `${(idx * 2.3 + 3.4).toFixed(1)} km away`,
-        }));
-        setProfilesList([...DISCOVERY_PROFILES, ...mapped]);
-      }
-    }
-    loadData();
-  }, []);
+  // Active profiles safe access
+  const activeProfile = profilesList[currentIndex % profilesList.length] || profilesList[0];
+  const nextProfile = profilesList[(currentIndex + 1) % profilesList.length] || profilesList[1];
 
-  // Card rotation interpolator (-16deg to 16deg)
-  const rotate = position.x.interpolate({
-    inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
-    outputRange: ['-16deg', '0deg', '16deg'],
-    extrapolate: 'clamp',
-  });
+  // Helper to ensure 3 distinct photos for the 3-photo fanned card
+  const photos = useMemo(() => {
+    if (!activeProfile) return [];
+    const base = activeProfile.photos || [];
+    const fallbacks = [
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+    ];
+    return [
+      base[0] || fallbacks[0],
+      base[1] || fallbacks[1],
+      base[2] || fallbacks[2],
+    ];
+  }, [activeProfile]);
 
-  // Stamp badge opacities & scale (dynamic tactile feel)
-  const likeOpacity = position.x.interpolate({
-    inputRange: [10, 75],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-
-  const likeScale = position.x.interpolate({
-    inputRange: [0, 80],
-    outputRange: [0.5, 1.1],
-    extrapolate: 'clamp',
-  });
-
-  const dislikeOpacity = position.x.interpolate({
-    inputRange: [-75, -10],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-
-  const dislikeScale = position.x.interpolate({
-    inputRange: [-80, 0],
-    outputRange: [1.1, 0.5],
-    extrapolate: 'clamp',
-  });
-
-  // Next card scale and position interpolator
-  const nextCardScale = position.x.interpolate({
-    inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
-    outputRange: [1, 0.95, 1],
-    extrapolate: 'clamp',
-  });
-
+  // Keep references in sync for PanResponder release handler
   const currentIndexRef = useRef(currentIndex);
-  useEffect(() => {
-    currentIndexRef.current = currentIndex;
-  }, [currentIndex]);
-
+  currentIndexRef.current = currentIndex;
   const profilesListRef = useRef(profilesList);
-  useEffect(() => {
-    profilesListRef.current = profilesList;
-  }, [profilesList]);
+  profilesListRef.current = profilesList;
 
-  // Robust PanResponder with capture delegation
+  // Horizontal pan responder for cards
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => false,
       onStartShouldSetPanResponderCapture: () => false,
-      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dx) > 4 || Math.abs(gesture.dy) > 4,
-      onMoveShouldSetPanResponderCapture: (_, gesture) => Math.abs(gesture.dx) > 4 || Math.abs(gesture.dy) > 4,
+      onMoveShouldSetPanResponder: (_, gesture) =>
+        Math.abs(gesture.dx) > Math.abs(gesture.dy) && Math.abs(gesture.dx) > 12,
+      onMoveShouldSetPanResponderCapture: (_, gesture) =>
+        Math.abs(gesture.dx) > Math.abs(gesture.dy) && Math.abs(gesture.dx) > 12,
       onPanResponderTerminationRequest: () => false,
+      onPanResponderGrant: () => {
+        panStartTimeRef.current = Date.now();
+      },
       onPanResponderMove: (_, gesture) => {
-        position.setValue({ x: gesture.dx, y: gesture.dy });
+        position.setValue({ x: gesture.dx, y: gesture.dy * 0.2 });
       },
       onPanResponderRelease: (_, gesture) => {
-        // If movement is very small, treat as a tap to open profile details
-        if (Math.abs(gesture.dx) < 8 && Math.abs(gesture.dy) < 8) {
-          const profile = profilesListRef.current[currentIndexRef.current];
-          if (profile) {
-            onProfilePress(profile as MatrimonyProfile);
-          }
+        const elapsed = Date.now() - panStartTimeRef.current;
+        const dist = Math.hypot(gesture.dx, gesture.dy);
+
+        // Immediate tap opens details
+        if (dist < 18 || (elapsed < 320 && dist < 28)) {
+          resetPosition();
+          const target = profilesListRef.current[currentIndexRef.current % profilesListRef.current.length];
+          if (target) onProfilePress(target);
           return;
         }
 
@@ -298,26 +164,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     })
   ).current;
 
-  const forceSwipe = (direction: 'right' | 'left' | 'up') => {
-    const x = direction === 'right' ? SCREEN_WIDTH + 150 : direction === 'left' ? -SCREEN_WIDTH - 150 : 0;
-    const y = direction === 'up' ? -SCREEN_HEIGHT : 0;
-
+  const forceSwipe = (direction: 'right' | 'left') => {
+    const x = direction === 'right' ? SCREEN_WIDTH + 100 : -SCREEN_WIDTH - 100;
     Animated.timing(position, {
-      toValue: { x, y },
-      duration: 220,
+      toValue: { x, y: 0 },
+      duration: 250,
       useNativeDriver: false,
     }).start(() => onSwipeComplete(direction));
   };
 
-  const onSwipeComplete = (direction: 'right' | 'left' | 'up') => {
-    const item = profilesListRef.current[currentIndexRef.current];
-
-    if (direction === 'right') {
-      // Like / Send interest
-      StorageService.sendInterest('my_profile', item?.id || 'usr_matched').catch(() => {});
+  const onSwipeComplete = (direction: 'right' | 'left') => {
+    const target = profilesList[currentIndex % profilesList.length];
+    if (direction === 'right' && target) {
+      handleExpressInterest(target);
     }
-
     position.setValue({ x: 0, y: 0 });
+    setActivePhotoIndex(0);
     setCurrentIndex(prev => prev + 1);
   };
 
@@ -325,440 +187,561 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     Animated.spring(position, {
       toValue: { x: 0, y: 0 },
       friction: 5,
-      tension: 60,
+      tension: 40,
       useNativeDriver: false,
     }).start();
   };
 
-  const currentProfile = profilesList[currentIndex];
-  const nextProfile = profilesList[currentIndex + 1];
+  const handleExpressInterest = (profile: MatrimonyProfile) => {
+    setLikedProfiles(prev => ({ ...prev, [profile.id]: true }));
+    StorageService.sendInterest('my-profile', profile.id).catch(() => {});
+    Alert.alert(
+      isTa ? 'விருப்பம் தெரிவிக்கப்பட்டது! 💌' : 'Interest Sent! 💌',
+      isTa
+        ? `${profile.name} அவர்களுக்கு உங்கள் திருமண விருப்பம் தெரிவிக்கப்பட்டது.`
+        : `Your matrimonial interest was conveyed to ${profile.name}'s family.`
+    );
+  };
+
+  const handleCardPress = (profile: MatrimonyProfile) => {
+    onProfilePress(profile);
+  };
+
+  const handleOpenChat = (profile: MatrimonyProfile) => {
+    if (onChatPress) {
+      onChatPress(profile);
+    } else {
+      Alert.alert(
+        isTa ? 'அரட்டை' : 'Chat',
+        isTa ? `${profile.name} உடன் அரட்டை தொடங்கப்படுகிறது.` : `Connecting with ${profile.name}...`
+      );
+    }
+  };
+
+  const handleMoreOptions = (profile: MatrimonyProfile) => {
+    Alert.alert(
+      profile.name,
+      isTa ? 'விருப்பங்களைத் தேர்ந்தெடுக்கவும்' : 'Select an option',
+      [
+        {
+          text: isTa ? 'ஜாதகப் பொருத்தம் பார்க்க' : 'View Horoscope Match',
+          onPress: () => {
+            if (onViewHoroscopePorutham && profile.horoscope) {
+              onViewHoroscopePorutham(profile.horoscope);
+            } else {
+              Alert.alert(
+                'ஜாதகம் / Horoscope',
+                `ராசி: ${profile.horoscope?.rasi || 'Mesham'} | நட்சத்திரம்: ${profile.horoscope?.nakshatram || 'Ashwini'}`
+              );
+            }
+          },
+        },
+        {
+          text: isTa ? 'பட்டியலில் சேர்க்க' : 'Add to Shortlist',
+          onPress: () => {
+            StorageService.toggleShortlist(profile.id).catch(() => {});
+            Alert.alert(isTa ? 'சேர்க்கப்பட்டது' : 'Shortlisted', `${profile.name} shortlisted.`);
+          },
+        },
+        { text: isTa ? 'மூடு' : 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  // Card transform interpolations
+  const rotate = position.x.interpolate({
+    inputRange: [-SCREEN_WIDTH * 1.5, 0, SCREEN_WIDTH * 1.5],
+    outputRange: ['-10deg', '0deg', '10deg'],
+  });
+
+  const likeOpacity = position.x.interpolate({
+    inputRange: [20, SWIPE_THRESHOLD],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  const passOpacity = position.x.interpolate({
+    inputRange: [-SWIPE_THRESHOLD, -20],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  // Center photo selection & cycling
+  const centerPhoto = photos[activePhotoIndex % photos.length] || photos[0];
+  const leftPhoto = photos[(activePhotoIndex + 1) % photos.length] || photos[1];
+  const rightPhoto = photos[(activePhotoIndex + 2) % photos.length] || photos[2];
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      {/* ─── Top Bar: Location + Filter Button ──────────────────────── */}
-      <View style={[styles.topBar, { paddingTop: Math.max(insets.top + 6, 14) }]}>
-        <View style={styles.locationContainer}>
-          <Text style={styles.locationLabel}>
-            {isTa ? 'இருப்பிடம்' : 'Location'}
-          </Text>
-          <TouchableOpacity
-            style={styles.locationSelector}
-            onPress={() => setShowLocationModal(true)}
-            activeOpacity={0.7}
-          >
-            {/* Purple Map Pin */}
-            <Svg width={18} height={18} viewBox="0 0 24 24" fill={BRAND_PURPLE}>
-              <Path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-            </Svg>
-            <Text style={styles.locationText}>{selectedLocation}</Text>
-            {/* Chevron Down */}
-            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth={2}>
-              <Path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
-          </TouchableOpacity>
-        </View>
-
-        {/* Filter Button on Top Right */}
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={() => setShowFilterModal(true)}
-          activeOpacity={0.75}
-        >
-          {/* Sliders / Filter Icon */}
-          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={BRAND_PURPLE} strokeWidth={2}>
-            <Path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" strokeLinejoin="round" />
-          </Svg>
-        </TouchableOpacity>
+      {/* Top Sky-Blue Gradient Background */}
+      <View style={[styles.skyGradientBackground, { height: 260 + insets.top }]}>
+        <Svg width="100%" height="100%">
+          <Defs>
+            <LinearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#BFE3FD" stopOpacity="1" />
+              <Stop offset="0.5" stopColor="#D8ECFD" stopOpacity="0.85" />
+              <Stop offset="1" stopColor="#F6FAFE" stopOpacity="0" />
+            </LinearGradient>
+          </Defs>
+          <Rect width="100%" height="100%" fill="url(#skyGrad)" />
+        </Svg>
       </View>
 
-      {/* ─── Main Fixed Viewport Screen Body (No ScrollView Interception) ─── */}
-      <View
-        style={[
-          styles.screenBody,
-          { paddingBottom: Math.max(insets.bottom + 85, 105) },
-        ]}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top, 14) }]}
+        showsVerticalScrollIndicator={false}
       >
-        {/* ─── Stories / Avatar Row ─────────────────────────────────── */}
-        <View style={styles.storiesWrap}>
+        {/* 1. Header Bar (Matches Screenshot) */}
+        <View style={styles.headerBar}>
+          {/* Left: Hamburger Button + "Home" Title */}
+          <View style={styles.headerLeftGroup}>
+            <TouchableOpacity
+              style={styles.hamburgerBtn}
+              activeOpacity={0.8}
+              onPress={onAdminPress}
+              accessibilityLabel="Menu"
+            >
+              <Svg width={20} height={15} viewBox="0 0 20 15" fill="none">
+                <Path d="M1.5 2H18.5M1.5 7.5H13.5M1.5 13H18.5" stroke="#18181B" strokeWidth={2.4} strokeLinecap="round" />
+              </Svg>
+            </TouchableOpacity>
+
+            <Text style={styles.headerTitleText}>Home</Text>
+
+            {/* Language switch capsule */}
+            <TouchableOpacity
+              style={styles.langPill}
+              activeOpacity={0.8}
+              onPress={onToggleLanguage}
+            >
+              <Text style={styles.langPillText}>{isTa ? 'தமிழ்' : 'EN'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Right: Notification Capsule + Circular Search Button */}
+          <View style={styles.headerRightGroup}>
+            {/* Notification Capsule with Bell + Count */}
+            <TouchableOpacity
+              style={styles.notifCapsule}
+              activeOpacity={0.8}
+              onPress={onNotificationPress}
+              accessibilityLabel="Notifications"
+            >
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#18181B" strokeWidth={2}>
+                <Path d="M18 8A6 6 0 0 0 6 8C6 15 3 17 3 17H21S18 15 18 8Z" />
+                <Path d="M13.73 21A2 2 0 0 1 10.27 21" />
+              </Svg>
+              <Text style={styles.notifCountText}>
+                {unreadCount > 0 ? unreadCount : 3}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Circular Search Button */}
+            <TouchableOpacity
+              style={styles.searchCircleBtn}
+              activeOpacity={0.8}
+              onPress={() => onSearchPress()}
+              accessibilityLabel="Search"
+            >
+              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#18181B" strokeWidth={2.2}>
+                <Circle cx={11} cy={11} r={7.5} />
+                <Path d="M21 21L16.5 16.5" strokeLinecap="round" />
+              </Svg>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* 2. Horizontal Stories Bar (Matches Screenshot) */}
+        <View style={styles.storiesContainer}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.storiesContainer}
+            contentContainerStyle={styles.storiesScrollContent}
           >
-            {/* Add Avatar Slot */}
+            {/* "Your Story" Card */}
             <TouchableOpacity
-              style={styles.storyItem}
-              activeOpacity={0.8}
-              onPress={() => Alert.alert(isTa ? 'கதை சேர்க்க' : 'Add Story', isTa ? 'உங்கள் புகைப்படத்தைப் பகிரவும்' : 'Upload a photo to your daily moments')}
+              style={styles.yourStoryCard}
+              activeOpacity={0.85}
+              onPress={() => onProfilePress(profilesList[0])}
             >
-              <View style={styles.addStoryCircle}>
+              <View style={styles.yourStoryAvatarHolder}>
                 <Image
-                  source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80' }}
-                  style={styles.addStoryBgImage}
+                  source={{
+                    uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+                  }}
+                  style={styles.yourStoryAvatar}
                 />
-                <View style={styles.addStoryOverlay} />
-                <View style={styles.addPlusCenterBadge}>
-                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2.8}>
-                    <Path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                <View style={styles.plusIconBadge}>
+                  <Svg width={10} height={10} viewBox="0 0 12 12" fill="none">
+                    <Path d="M6 1V11M1 6H11" stroke="#FFFFFF" strokeWidth={2.4} strokeLinecap="round" />
                   </Svg>
                 </View>
               </View>
-              <Text style={styles.storyName}>{isTa ? 'சேர்க்க' : 'Add'}</Text>
+              <Text style={styles.yourStoryLabel} numberOfLines={1}>
+                {isTa ? 'உங்கள் கதை' : 'Your Story'}
+              </Text>
             </TouchableOpacity>
 
-            {/* User Avatars with Purple Ring */}
-            {STORIES_DATA.map(item => (
+            {/* Candidate Stories Cards */}
+            {profilesList.slice(0, 8).map((item, idx) => (
               <TouchableOpacity
-                key={item.id}
-                style={styles.storyItem}
-                activeOpacity={0.8}
-                onPress={() => {
-                  const match = profilesList.find(p => p.name?.toLowerCase().includes(item.name.toLowerCase()));
-                  if (match) onProfilePress(match as MatrimonyProfile);
-                }}
+                key={item.id || idx}
+                style={styles.storyCard}
+                activeOpacity={0.85}
+                onPress={() => onProfilePress(item)}
               >
-                <View style={styles.storyRing}>
-                  <Image source={{ uri: item.image }} style={styles.storyImage} />
+                <Image source={{ uri: item.photos[0] }} style={styles.storyCardBg} resizeMode="cover" />
+                <View style={styles.storyMiniBadge}>
+                  <Image source={{ uri: item.photos[0] }} style={styles.storyMiniAvatar} />
                 </View>
-                <Text style={styles.storyName}>{item.name}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
 
-        {/* ─── Swipeable Card Deck Section ─────────────────────────── */}
-        <View style={styles.deckContainer}>
-          {currentProfile ? (
-            <View style={styles.cardWrapper}>
-              {/* Next Card in Background */}
-              {nextProfile && (
-                <Animated.View
-                  style={[
-                    styles.card,
-                    styles.nextCard,
-                    { transform: [{ scale: nextCardScale }] },
-                  ]}
+        {/* 3. Centerpiece Feed Post / Varan Showcase Card */}
+        {activeProfile && (
+          <View style={styles.feedCardWrapper}>
+            {/* Gesture-enabled Post Card */}
+            <Animated.View
+              style={[
+                styles.feedPostCard,
+                {
+                  transform: [
+                    { translateX: position.x },
+                    { translateY: position.y },
+                    { rotate },
+                  ],
+                },
+              ]}
+              {...panResponder.panHandlers}
+            >
+              {/* Card Header (Avatar, Name, Verified, Subtitle, Relationship) */}
+              <View style={styles.postHeader}>
+                <TouchableOpacity
+                  style={styles.postAuthorGroup}
+                  activeOpacity={0.85}
+                  onPress={() => handleCardPress(activeProfile)}
                 >
-                  <Image
-                    source={{ uri: nextProfile.photos?.[0] || STORIES_DATA[0].image }}
-                    style={styles.cardImage}
-                    resizeMode="cover"
-                  />
-                  {/* Distance Pill */}
-                  <View style={styles.distanceBadge}>
-                    <Text style={styles.distanceText}>{nextProfile.distance || '10.5 km away'}</Text>
-                  </View>
-
-                  {/* Bottom Info Gradient Area */}
-                  <View style={styles.cardInfoArea}>
-                    <View style={styles.nameRow}>
-                      <Text style={styles.profileName}>{nextProfile.name}</Text>
-                      {/* Golden Verified Badge */}
-                      <View style={styles.verifiedStarBadge}>
-                        <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-                          <Path
-                            d="M5 13l4 4L19 7"
-                            stroke="#18181D"
-                            strokeWidth="3.4"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
+                  <Image source={{ uri: activeProfile.photos[0] }} style={styles.postAvatar} />
+                  <View style={styles.authorMetaColumn}>
+                    <View style={styles.authorNameRow}>
+                      <Text style={styles.authorNameText} numberOfLines={1}>
+                        {activeProfile.name}
+                      </Text>
+                      {/* Blue Verified Badge */}
+                      <View style={styles.verifiedCheckBadge}>
+                        <Svg width={14} height={14} viewBox="0 0 24 24" fill="#0095F6">
+                          <Circle cx={12} cy={12} r={10} />
+                          <Path d="M8 12.5L10.5 15L16 9.5" stroke="#FFFFFF" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" fill="none" />
                         </Svg>
                       </View>
                     </View>
-                    <Text style={styles.profileLocation}>
-                      {`${nextProfile.currentCity || 'NEW YORK'}, ${nextProfile.currentCountry || 'USA'}`.toUpperCase()}
+                    <Text style={styles.authorSubText} numberOfLines={1}>
+                      3 mins ago • {activeProfile.currentCity || 'Chennai'} • 🌐
                     </Text>
                   </View>
+                </TouchableOpacity>
+
+                {/* Relationship Pill (e.g., Brother, Daughter, Self) */}
+                <View style={styles.relationPill}>
+                  <Text style={styles.relationPillText}>
+                    {activeProfile.createdFor === 'daughter'
+                      ? 'Daughter'
+                      : activeProfile.createdFor === 'brother'
+                      ? 'Brother'
+                      : activeProfile.createdFor === 'son'
+                      ? 'Son'
+                      : activeProfile.createdFor === 'sister'
+                      ? 'Sister'
+                      : 'Self'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* 3-Photo Layered Showcase (Signature Centerpiece) */}
+              <View style={styles.photoShowcaseContainer}>
+                {/* Left Angled Photo */}
+                <TouchableOpacity
+                  style={[styles.angledCardLeft]}
+                  activeOpacity={0.9}
+                  onPress={() => setActivePhotoIndex(prev => (prev + 1) % photos.length)}
+                >
+                  <Image source={{ uri: leftPhoto }} style={styles.angledPhoto} resizeMode="cover" />
+                </TouchableOpacity>
+
+                {/* Right Angled Photo */}
+                <TouchableOpacity
+                  style={[styles.angledCardRight]}
+                  activeOpacity={0.9}
+                  onPress={() => setActivePhotoIndex(prev => (prev + 2) % photos.length)}
+                >
+                  <Image source={{ uri: rightPhoto }} style={styles.angledPhoto} resizeMode="cover" />
+                </TouchableOpacity>
+
+                {/* Center Foreground Photo */}
+                <TouchableOpacity
+                  style={styles.centerPhotoCard}
+                  activeOpacity={0.95}
+                  onPress={() => handleCardPress(activeProfile)}
+                >
+                  <Image source={{ uri: centerPhoto }} style={styles.centerPhoto} resizeMode="cover" />
+                </TouchableOpacity>
+
+                {/* Dynamic Swiping Stamps */}
+                <Animated.View style={[styles.stampPill, styles.likeStamp, { opacity: likeOpacity }]}>
+                  <Text style={styles.likeStampText}>INTEREST 💌</Text>
                 </Animated.View>
-              )}
+                <Animated.View style={[styles.stampPill, styles.passStamp, { opacity: passOpacity }]}>
+                  <Text style={styles.passStampText}>PASS ✕</Text>
+                </Animated.View>
+              </View>
 
-              {/* Top Interactive Swipable Card */}
-              <Animated.View
-                {...panResponder.panHandlers}
-                style={[
-                  styles.card,
-                  {
-                    transform: [
-                      { translateX: position.x },
-                      { translateY: position.y },
-                      { rotate },
-                    ],
-                  },
-                ]}
-              >
-                <View style={{ flex: 1 }}>
-                  <Image
-                    source={{ uri: currentProfile.photos?.[0] || STORIES_DATA[1].image }}
-                    style={styles.cardImage}
-                    resizeMode="cover"
-                  />
+              {/* Bio Description Paragraph */}
+              <Text style={styles.postDescriptionText} numberOfLines={3}>
+                {activeProfile.about ||
+                  "Seeking a caring, cultured alliance from an affectionate Tamil family. Values traditional harmony alongside modern career pursuits."}
+              </Text>
 
-                  {/* Top-Left Distance Pill */}
-                  <View style={styles.distanceBadge}>
-                    <Text style={styles.distanceText}>{currentProfile.distance || '12.6 km away'}</Text>
-                  </View>
+              {/* Matrimonial Info Tags */}
+              <View style={styles.matrimonyTagsRow}>
+                <View style={styles.biodataTag}>
+                  <Text style={styles.biodataTagText}>🏷️ {activeProfile.caste || 'Tamil Community'}</Text>
+                </View>
+                <View style={styles.biodataTag}>
+                  <Text style={styles.biodataTagText}>
+                    🪐 {activeProfile.horoscope?.rasi?.split(' ')[0] || 'Simmam'} • {activeProfile.horoscope?.nakshatram?.split(' ')[0] || 'Magam'}
+                  </Text>
+                </View>
+                <View style={styles.biodataTag}>
+                  <Text style={styles.biodataTagText}>
+                    💼 {activeProfile.educationCareer?.occupation?.slice(0, 18) || 'Professional'}
+                  </Text>
+                </View>
+                <View style={styles.biodataTag}>
+                  <Text style={styles.biodataTagText}>📍 {activeProfile.nativeDistrict || 'Chennai'}</Text>
+                </View>
+              </View>
 
-                  {/* Top-Right 3-Dots Menu */}
+              {/* Action Bar (Matches Screenshot) */}
+              <View style={styles.postActionBar}>
+                {/* Left Capsule: [♥ 2.3k  💬 2.1k] */}
+                <View style={styles.actionLeftCapsule}>
                   <TouchableOpacity
-                    style={styles.dotsButton}
-                    onPress={() => onProfilePress(currentProfile as MatrimonyProfile)}
-                    activeOpacity={0.8}
-                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    style={styles.counterActionItem}
+                    activeOpacity={0.7}
+                    onPress={() => handleExpressInterest(activeProfile)}
                   >
-                    <Svg width={18} height={18} viewBox="0 0 24 24" fill="#FFFFFF">
-                      <Circle cx="12" cy="5" r="2" />
-                      <Circle cx="12" cy="12" r="2" />
-                      <Circle cx="12" cy="19" r="2" />
+                    <Svg width={18} height={18} viewBox="0 0 24 24" fill={likedProfiles[activeProfile.id] ? '#EF4444' : 'none'}>
+                      <Path
+                        d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                        stroke={likedProfiles[activeProfile.id] ? '#EF4444' : '#18181B'}
+                        strokeWidth={1.8}
+                      />
                     </Svg>
+                    <Text style={styles.counterText}>2.3k</Text>
                   </TouchableOpacity>
 
-                  {/* ── Dynamic Swipe Stamp Badges Matching Reference Screenshots ── */}
-                  {/* LIKE Badge (Heart stamp in center during drag right: Purple circle with white heart) */}
-                  <Animated.View
-                    style={[
-                      styles.stampBadge,
-                      styles.likeStamp,
-                      {
-                        opacity: likeOpacity,
-                        transform: [{ scale: likeScale }],
-                      },
-                    ]}
-                    pointerEvents="none"
-                  >
-                    <Svg width={34} height={34} viewBox="0 0 24 24" fill="#FFFFFF">
-                      <Path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                    </Svg>
-                  </Animated.View>
+                  <View style={styles.capsuleDivider} />
 
-                  {/* DISLIKE Badge (Cross stamp in center during drag left: White circle with purple cross) */}
-                  <Animated.View
-                    style={[
-                      styles.stampBadge,
-                      styles.dislikeStamp,
-                      {
-                        opacity: dislikeOpacity,
-                        transform: [{ scale: dislikeScale }],
-                      },
-                    ]}
-                    pointerEvents="none"
+                  <TouchableOpacity
+                    style={styles.counterActionItem}
+                    activeOpacity={0.7}
+                    onPress={() => handleOpenChat(activeProfile)}
                   >
-                    <Svg width={30} height={30} viewBox="0 0 24 24" fill="none" stroke={BRAND_PURPLE} strokeWidth={3.2}>
-                      <Path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+                    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
+                        stroke="#18181B"
+                        strokeWidth={1.8}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </Svg>
-                  </Animated.View>
+                    <Text style={styles.counterText}>2.1k</Text>
+                  </TouchableOpacity>
+                </View>
 
-                  {/* Bottom Information Overlay */}
-                  <View style={styles.cardInfoArea}>
-                    <View style={styles.nameRow}>
-                      <Text style={styles.profileName}>{currentProfile.name}</Text>
-                      {/* Golden Verified Badge with checkmark */}
-                      <View style={styles.verifiedStarBadge}>
-                        <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-                          <Path
-                            d="M5 13l4 4L19 7"
-                            stroke="#18181D"
-                            strokeWidth="3.4"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
+                {/* Center Capsule: [💬 Comments here / 💌 Send Interest] */}
+                <TouchableOpacity
+                  style={styles.commentsCapsule}
+                  activeOpacity={0.8}
+                  onPress={() => handleExpressInterest(activeProfile)}
+                >
+                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                      stroke="#4B5563"
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                  <Text style={styles.commentsCapsuleText}>
+                    {isTa ? 'விருப்பம் தெரிவிக்க' : 'Comments here'}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Right Button: [⋮] Options */}
+                <TouchableOpacity
+                  style={styles.moreCircleBtn}
+                  activeOpacity={0.8}
+                  onPress={() => handleMoreOptions(activeProfile)}
+                >
+                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                    <Circle cx={12} cy={5} r={1.8} fill="#18181B" />
+                    <Circle cx={12} cy={12} r={1.8} fill="#18181B" />
+                    <Circle cx={12} cy={19} r={1.8} fill="#18181B" />
+                  </Svg>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </View>
+        )}
+
+        {/* 4. Second Feed Post (for continuous scrolling feed) */}
+        {nextProfile && (
+          <View style={styles.feedCardWrapper}>
+            <TouchableOpacity
+              style={styles.feedPostCard}
+              activeOpacity={0.92}
+              onPress={() => handleCardPress(nextProfile)}
+            >
+              {/* Header */}
+              <View style={styles.postHeader}>
+                <View style={styles.postAuthorGroup}>
+                  <Image source={{ uri: nextProfile.photos[0] }} style={styles.postAvatar} />
+                  <View style={styles.authorMetaColumn}>
+                    <View style={styles.authorNameRow}>
+                      <Text style={styles.authorNameText} numberOfLines={1}>
+                        {nextProfile.name}
+                      </Text>
+                      <View style={styles.verifiedCheckBadge}>
+                        <Svg width={14} height={14} viewBox="0 0 24 24" fill="#0095F6">
+                          <Circle cx={12} cy={12} r={10} />
+                          <Path d="M8 12.5L10.5 15L16 9.5" stroke="#FFFFFF" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" fill="none" />
                         </Svg>
                       </View>
                     </View>
-                    <Text style={styles.profileLocation}>
-                      {`${currentProfile.currentCity || 'NEWYORK'}, ${currentProfile.currentCountry || 'USA'}`.toUpperCase()}
+                    <Text style={styles.authorSubText} numberOfLines={1}>
+                      12 mins ago • {nextProfile.currentCity || 'Coimbatore'} • 🌐
                     </Text>
                   </View>
                 </View>
-              </Animated.View>
-            </View>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Svg width={56} height={56} viewBox="0 0 24 24" fill="none" stroke={BRAND_PURPLE} strokeWidth={1.5}>
-                <Circle cx="12" cy="12" r="10" />
-                <Path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" strokeLinecap="round" strokeLinejoin="round" />
-              </Svg>
-              <Text style={styles.emptyTitle}>
-                {isTa ? 'புதிய வரன்கள் இல்லை' : 'All caught up!'}
+                <View style={styles.relationPill}>
+                  <Text style={styles.relationPillText}>
+                    {nextProfile.createdFor === 'daughter' ? 'Daughter' : 'Parents'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* 3-Photo Showcase for next profile */}
+              <View style={styles.photoShowcaseContainer}>
+                <View style={[styles.angledCardLeft]}>
+                  <Image
+                    source={{ uri: nextProfile.photos[1] || nextProfile.photos[0] }}
+                    style={styles.angledPhoto}
+                    resizeMode="cover"
+                  />
+                </View>
+                <View style={[styles.angledCardRight]}>
+                  <Image
+                    source={{ uri: nextProfile.photos[2] || nextProfile.photos[0] }}
+                    style={styles.angledPhoto}
+                    resizeMode="cover"
+                  />
+                </View>
+                <View style={styles.centerPhotoCard}>
+                  <Image source={{ uri: nextProfile.photos[0] }} style={styles.centerPhoto} resizeMode="cover" />
+                </View>
+              </View>
+
+              {/* Description */}
+              <Text style={styles.postDescriptionText} numberOfLines={3}>
+                {nextProfile.about}
               </Text>
-              <Text style={styles.emptySubtitle}>
-                {isTa
-                  ? 'நீங்கள் அனைத்து வரன்களையும் பார்வையிட்டுள்ளீர்கள். மீண்டும் பார்க்க தொடங்குங்கள்.'
-                  : "You've reviewed all suggested profiles. Tap below to reload."}
-              </Text>
-              <TouchableOpacity
-                style={styles.reloadButton}
-                onPress={() => setCurrentIndex(0)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.reloadButtonText}>
-                  {isTa ? 'மீண்டும் தொடங்கு' : 'Reload Profiles'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
 
-        {/* ─── Floating Action Buttons: Cross, Heart, Star ────────── */}
-        <View style={styles.actionsRow}>
-          {/* Left: Cross / Pass Button */}
-          <TouchableOpacity
-            style={styles.crossBtn}
-            onPress={() => forceSwipe('left')}
-            activeOpacity={0.8}
-          >
-            <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={BRAND_PURPLE} strokeWidth={2.8}>
-              <Path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
-          </TouchableOpacity>
+              {/* Action Bar */}
+              <View style={styles.postActionBar}>
+                <View style={styles.actionLeftCapsule}>
+                  <View style={styles.counterActionItem}>
+                    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                        stroke="#18181B"
+                        strokeWidth={1.8}
+                      />
+                    </Svg>
+                    <Text style={styles.counterText}>1.8k</Text>
+                  </View>
+                  <View style={styles.capsuleDivider} />
+                  <View style={styles.counterActionItem}>
+                    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
+                        stroke="#18181B"
+                        strokeWidth={1.8}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                    <Text style={styles.counterText}>940</Text>
+                  </View>
+                </View>
 
-          {/* Center: Heart / Like Button */}
-          <TouchableOpacity
-            style={styles.heartBtn}
-            onPress={() => forceSwipe('right')}
-            activeOpacity={0.85}
-          >
-            <Svg width={30} height={30} viewBox="0 0 24 24" fill="#FFFFFF">
-              <Path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-            </Svg>
-          </TouchableOpacity>
-
-          {/* Right: Star / Super Like Button */}
-          <TouchableOpacity
-            style={styles.starBtn}
-            onPress={() => {
-              Alert.alert(
-                isTa ? 'சிறப்பு விருப்பம் ⭐' : 'Super Like ⭐',
-                isTa ? 'இந்த வரனுக்கு சிறப்பு விருப்பம் அனுப்பப்பட்டது!' : 'Sent a Super Like to this profile!'
-              );
-              forceSwipe('right');
-            }}
-            activeOpacity={0.8}
-          >
-            <Svg width={24} height={24} viewBox="0 0 24 24" fill="#111827">
-              <Path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-            </Svg>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* ─── Location Selector Modal ──────────────────────────────── */}
-      <Modal
-        visible={showLocationModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowLocationModal(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalBackdrop}
-          activeOpacity={1}
-          onPress={() => setShowLocationModal(false)}
-        >
-          <View
-            style={[styles.modalSheet, { paddingBottom: Math.max(insets.bottom + 16, 24) }]}
-            onStartShouldSetResponder={() => true}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {isTa ? 'இருப்பிடத்தைத் தேர்ந்தெடுக்கவும்' : 'Select Location'}
-              </Text>
-              <TouchableOpacity onPress={() => setShowLocationModal(false)}>
-                <Text style={styles.modalCloseText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            {['New York, USA', 'Chennai, India', 'Coimbatore, India', 'Bangalore, India', 'San Francisco, USA', 'London, UK'].map(loc => (
-              <TouchableOpacity
-                key={loc}
-                style={[
-                  styles.locationItemRow,
-                  selectedLocation === loc && styles.locationItemRowActive,
-                ]}
-                onPress={() => {
-                  setSelectedLocation(loc);
-                  setShowLocationModal(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.locationItemText,
-                    selectedLocation === loc && styles.locationItemTextActive,
-                  ]}
+                <TouchableOpacity
+                  style={styles.commentsCapsule}
+                  onPress={() => handleExpressInterest(nextProfile)}
                 >
-                  {loc}
-                </Text>
-                {selectedLocation === loc && (
-                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={BRAND_PURPLE} strokeWidth={2.6}>
-                    <Path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+                  <Text style={styles.commentsCapsuleText}>
+                    {isTa ? 'விருப்பம் தெரிவிக்க' : 'Comments here'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.moreCircleBtn}
+                  onPress={() => handleMoreOptions(nextProfile)}
+                >
+                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                    <Circle cx={12} cy={5} r={1.8} fill="#18181B" />
+                    <Circle cx={12} cy={12} r={1.8} fill="#18181B" />
+                    <Circle cx={12} cy={19} r={1.8} fill="#18181B" />
                   </Svg>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* ─── Filter Options Modal ─────────────────────────────────── */}
-      <Modal
-        visible={showFilterModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowFilterModal(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalBackdrop}
-          activeOpacity={1}
-          onPress={() => setShowFilterModal(false)}
-        >
-          <View
-            style={[styles.modalSheet, { paddingBottom: Math.max(insets.bottom + 20, 28) }]}
-            onStartShouldSetResponder={() => true}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {isTa ? 'வடிகட்டிகள்' : 'Filter Matches'}
-              </Text>
-              <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-                <Text style={styles.modalCloseText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.filterSectionTitle}>
-              {isTa ? 'அதிகபட்ச தூரம்' : 'Maximum Distance'}
-            </Text>
-            <View style={styles.filterChipsRow}>
-              {['5 km', '15 km', '30 km', '50+ km'].map((dist, i) => (
-                <View key={dist} style={[styles.filterChip, i === 1 && styles.filterChipActive]}>
-                  <Text style={[styles.filterChipText, i === 1 && styles.filterChipTextActive]}>{dist}</Text>
-                </View>
-              ))}
-            </View>
-
-            <Text style={[styles.filterSectionTitle, { marginTop: 18 }]}>
-              {isTa ? 'வயது வரம்பு' : 'Age Range'}
-            </Text>
-            <View style={styles.filterChipsRow}>
-              {['20 - 25', '24 - 28', '28 - 32', 'All'].map((age, i) => (
-                <View key={age} style={[styles.filterChip, i === 1 && styles.filterChipActive]}>
-                  <Text style={[styles.filterChipText, i === 1 && styles.filterChipTextActive]}>{age}</Text>
-                </View>
-              ))}
-            </View>
-
-            <TouchableOpacity
-              style={styles.applyFilterBtn}
-              onPress={() => setShowFilterModal(false)}
-              activeOpacity={0.88}
-            >
-              <Text style={styles.applyFilterBtnText}>
-                {isTa ? 'பொருத்தங்களைக் காட்டு' : 'Apply Filters'}
-              </Text>
+                </TouchableOpacity>
+              </View>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-      </Modal>
+        )}
+
+        {/* 5. Traditional Matrimonial Discovery Features */}
+        <HomeMatrimonyFeatures
+          language={language}
+          onSearchPress={query => onSearchPress(query)}
+          onProfilePress={onProfilePress}
+          onViewHoroscopePorutham={onViewHoroscopePorutham}
+          onFamilyCirclePress={onFamilyCirclePress}
+          onRelationshipManagerPress={onRelationshipManagerPress}
+          onMembershipPress={onMembershipPress}
+        />
+
+        {/* Extra Bottom Spacing for Floating Tab Bar */}
+        <View style={{ height: 110 }} />
+      </ScrollView>
+
+      {/* Filter Modal */}
+      <HomeFilterModal
+        visible={showFilterModal}
+        isTa={isTa}
+        currentLocation={selectedLocation}
+        onClose={() => setShowFilterModal(false)}
+        onApply={(filters: FilterState) => {
+          setShowFilterModal(false);
+          if (filters.location) setSelectedLocation(filters.location);
+        }}
+      />
     </View>
   );
 };
@@ -766,436 +749,442 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F6FAFE',
   },
-  screenBody: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  storiesWrap: {
-    flexGrow: 0,
-    paddingTop: 4,
-    paddingBottom: 4,
-  },
-  scrollContent: {
-    paddingTop: 8,
-  },
-
-  /* Top Bar */
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-    backgroundColor: '#FFFFFF',
-  },
-  locationContainer: {
-    flexDirection: 'column',
-  },
-  locationLabel: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  locationSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  locationText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  filterButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#F4F2FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  /* Stories Row */
-  storiesContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 14,
-  },
-  storyItem: {
-    alignItems: 'center',
-    width: 68,
-  },
-  addStoryCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#0F172A',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  addStoryBgImage: {
-    width: '100%',
-    height: '100%',
-    opacity: 0.5,
-  },
-  addStoryOverlay: {
+  skyGradientBackground: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    zIndex: 0,
   },
-  addPlusCenterBadge: {
-    position: 'absolute',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(59, 130, 246, 0.65)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  scrollView: {
+    flex: 1,
+    zIndex: 1,
   },
-  storyRing: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 2.2,
-    borderColor: BRAND_PURPLE,
-    padding: 2,
-  },
-  storyImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 30,
-  },
-  storyName: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#374151',
-    marginTop: 6,
-    textAlign: 'center',
+  scrollContent: {
+    paddingBottom: 20,
   },
 
-  /* Card Deck */
-  deckContainer: {
-    flex: 1,
+  // 1. Header Bar Styles
+  headerBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: 16,
-    marginVertical: 4,
+    paddingVertical: 10,
   },
-  cardWrapper: {
-    width: SCREEN_WIDTH - 32,
-    flex: 1,
-    maxHeight: Math.min(SCREEN_HEIGHT * 0.54, 460),
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  card: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    borderRadius: 26,
-    overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
-    elevation: 6,
-  },
-  nextCard: {
-    top: 10,
-  },
-  cardImage: {
-    width: '100%',
-    height: '100%',
-  },
-
-  /* Distance Badge */
-  distanceBadge: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.45)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 18,
-  },
-  distanceText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-
-  /* Dots Menu Button */
-  dotsButton: {
-    position: 'absolute',
-    top: 14,
-    right: 14,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  /* Bottom Info Area */
-  cardInfoArea: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingBottom: 22,
-    paddingTop: 40,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  nameRow: {
+  headerLeftGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
-  profileName: {
-    fontSize: 24,
+  hamburgerBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  headerTitleText: {
+    fontSize: 22,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#18181B',
     letterSpacing: -0.3,
   },
-  verifiedStarBadge: {
+  langPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
+  },
+  langPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4B5563',
+  },
+  headerRightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  notifCapsule: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 22,
+    gap: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  notifCountText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#18181B',
+  },
+  searchCircleBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+
+  // 2. Horizontal Stories Styles
+  storiesContainer: {
+    marginTop: 6,
+    marginBottom: 8,
+  },
+  storiesScrollContent: {
+    paddingHorizontal: 16,
+    gap: 10,
+    alignItems: 'center',
+  },
+  yourStoryCard: {
+    width: 76,
+    height: 98,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 6,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  yourStoryAvatarHolder: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  yourStoryAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#E5E7EB',
+  },
+  plusIconBadge: {
+    position: 'absolute',
+    bottom: -4,
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#FACC15',
+    backgroundColor: '#0095F6',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  profileLocation: {
+  yourStoryLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginTop: 8,
+  },
+  storyCard: {
+    width: 76,
+    height: 98,
+    borderRadius: 18,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#E5E7EB',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  storyCardBg: {
+    width: '100%',
+    height: '100%',
+  },
+  storyMiniBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  storyMiniAvatar: {
+    width: '100%',
+    height: '100%',
+  },
+
+  // 3. Varan Showcase Card Styles
+  feedCardWrapper: {
+    paddingHorizontal: 16,
+    marginVertical: 6,
+  },
+  feedPostCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    padding: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.04)',
+  },
+  postHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  postAuthorGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  postAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#E5E7EB',
+  },
+  authorMetaColumn: {
+    flex: 1,
+  },
+  authorNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  authorNameText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#18181B',
+  },
+  verifiedCheckBadge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authorSubText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  relationPill: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  relationPillText: {
     fontSize: 12,
     fontWeight: '700',
-    color: 'rgba(255, 255, 255, 0.85)',
-    letterSpacing: 1,
-    marginTop: 4,
+    color: '#4B5563',
   },
 
-  /* Dynamic Stamp Badges */
-  stampBadge: {
-    position: 'absolute',
-    top: '40%',
-    left: '50%',
-    marginLeft: -40,
-    marginTop: -40,
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  // 3-Photo Layered Showcase Container
+  photoShowcaseContainer: {
+    height: 245,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 99,
+    position: 'relative',
+    marginVertical: 10,
+  },
+  angledCardLeft: {
+    position: 'absolute',
+    width: 142,
+    height: 195,
+    borderRadius: 18,
+    overflow: 'hidden',
+    transform: [{ rotate: '-9deg' }, { translateX: -48 }, { translateY: 6 }],
+    backgroundColor: '#E5E7EB',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.12,
     shadowRadius: 8,
+    elevation: 3,
+  },
+  angledCardRight: {
+    position: 'absolute',
+    width: 142,
+    height: 195,
+    borderRadius: 18,
+    overflow: 'hidden',
+    transform: [{ rotate: '9deg' }, { translateX: 48 }, { translateY: 6 }],
+    backgroundColor: '#E5E7EB',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  angledPhoto: {
+    width: '100%',
+    height: '100%',
+  },
+  centerPhotoCard: {
+    width: 178,
+    height: 228,
+    borderRadius: 22,
+    overflow: 'hidden',
+    zIndex: 5,
+    backgroundColor: '#E5E7EB',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
     elevation: 8,
   },
-  likeStamp: {
-    backgroundColor: BRAND_PURPLE,
-  },
-  dislikeStamp: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
+  centerPhoto: {
+    width: '100%',
+    height: '100%',
   },
 
-  /* Action Buttons Row */
-  actionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 22,
-    paddingTop: 10,
-    paddingBottom: 6,
-  },
-  crossBtn: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  heartBtn: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: BRAND_PURPLE,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: BRAND_PURPLE,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  starBtn: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: '#FDE047',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-
-  /* Empty Deck State */
-  emptyContainer: {
-    width: SCREEN_WIDTH - 32,
-    height: SCREEN_HEIGHT * 0.48,
-    borderRadius: 26,
-    backgroundColor: '#F8F9FB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
-    marginTop: 16,
-    marginBottom: 6,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  reloadButton: {
-    backgroundColor: BRAND_PURPLE,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 22,
-  },
-  reloadButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-
-  /* Modal Base */
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-    marginBottom: 12,
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  modalCloseText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#9CA3AF',
-    paddingHorizontal: 8,
-  },
-  locationItemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F8F9FA',
-  },
-  locationItemRowActive: {
-    backgroundColor: '#F4F2FF',
-    borderRadius: 10,
-  },
-  locationItemText: {
-    fontSize: 15,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  locationItemTextActive: {
-    color: BRAND_PURPLE,
-    fontWeight: '700',
-  },
-
-  /* Filter Modal Content */
-  filterSectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 10,
-  },
-  filterChipsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 16,
-    backgroundColor: '#F3F4F6',
-  },
-  filterChipActive: {
-    backgroundColor: BRAND_PURPLE,
-  },
-  filterChipText: {
+  // Description & Tags
+  postDescriptionText: {
     fontSize: 13,
+    lineHeight: 19,
     color: '#4B5563',
-    fontWeight: '500',
+    marginVertical: 8,
+    fontWeight: '400',
   },
-  filterChipTextActive: {
-    color: '#FFFFFF',
+  matrimonyTagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginVertical: 6,
+  },
+  biodataTag: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  biodataTagText: {
+    fontSize: 11,
+    color: '#334155',
+    fontWeight: '600',
+  },
+
+  // Post Action Bar
+  postActionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    gap: 8,
+  },
+  actionLeftCapsule: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 22,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    gap: 12,
+  },
+  counterActionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  counterText: {
+    fontSize: 12,
     fontWeight: '700',
+    color: '#18181B',
   },
-  applyFilterBtn: {
-    backgroundColor: BRAND_PURPLE,
-    borderRadius: 24,
-    height: 48,
+  capsuleDivider: {
+    width: 1,
+    height: 14,
+    backgroundColor: '#D1D5DB',
+  },
+  commentsCapsule: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 24,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 22,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    gap: 6,
   },
-  applyFilterBtnText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
+  commentsCapsuleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4B5563',
+  },
+  moreCircleBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Decision Stamps
+  stampPill: {
+    position: 'absolute',
+    top: 20,
+    zIndex: 15,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 2,
+  },
+  likeStamp: {
+    left: 20,
+    borderColor: '#10B981',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    transform: [{ rotate: '-12deg' }],
+  },
+  likeStampText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#10B981',
+  },
+  passStamp: {
+    right: 20,
+    borderColor: '#EF4444',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    transform: [{ rotate: '12deg' }],
+  },
+  passStampText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#EF4444',
   },
 });
+
+export default HomeScreen;

@@ -1,22 +1,27 @@
 /**
- * Manamaalai Matrimony (மணமாலை) — Modern Golden Interests Screen
+ * Manamaalai Matrimony — Matches / Interests Screen (3rd Tab)
  *
- * Implements the unified golden-amber dashboard styling:
- * - Warm Golden Amber Hero Header (#F7BF2A)
- * - Sticky TopBar with Brand Badge, Avatar, Language Switcher & Notifications
- * - Segmented Header Tabs: Received (14), Sent (8), Accepted (5), Declined
- * - Floating White Metric Card with 3 Circular Ring Progress Gauges:
- *     1. Received Pending (14)
- *     2. Accepted Mutual (5)
- *     3. Sent Interests (8)
- * - High-Contrast Interest Cards with clean accept/decline/chat actions
+ * Implements the exact design from the reference screenshot:
+ * - Header: Back button (←), centered title "Matches", Filter button (☰)
+ * - Horizontal Filter Chips: All, Online (active purple), Newest, Nearest, etc.
+ * - 2-Column Grid of Beautiful Match Cards:
+ *     - Full-bleed vertical photo
+ *     - Top-left "90% Match" purple badge
+ *     - Top-right bright green online indicator dot
+ *     - Frosted distance capsule: "12.6 km away"
+ *     - Title: "Name, Age" + golden verified badge ✓
+ *     - Subtitle: "NEWYORK, USA"
+ * - Tapping any card opens the Profile Details screen
+ * - Top-right filter button opens HomeFilterModal
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
+  Dimensions,
   FlatList,
   Image,
   Platform,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -24,869 +29,512 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle } from 'react-native-svg';
-import { CustomIcon } from '../components/CustomIcon';
-import { Language, Translations } from '../localization';
+import Svg, { Circle, Path } from 'react-native-svg';
+import { HomeFilterModal, FilterState } from '../components/HomeFilterModal';
+import { Language } from '../localization';
 import { StorageService } from '../services/storage';
-import { CurrentUser, InterestRecord, MatrimonyProfile } from '../types';
+import { MatrimonyProfile } from '../types';
 
-/* ─── Luxury Design Tokens ─────────────────────────────────────────────────── */
-const PALETTE = {
-  amberHeader: '#F7BF2A',
-  amberHeaderDark: '#E5A914',
-  obsidianCard: '#1A1C1E',
-  obsidianMuted: '#9BA1AB',
-  pageBg: '#F8F5EE',
-  cardWhite: '#FFFFFF',
-  cardBorder: '#EFE8DC',
-  textInk: '#1C1614',
-  textMuted: '#7A6E67',
-  textSecondary: '#52453F',
-  maroon: '#49141C',
-  olive: '#6A7A14',
-  oliveSoft: '#EEF0D6',
-  rose: '#D17575',
-  redDot: '#E53E3E',
-};
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const BRAND_PURPLE = '#6D53F5';
+const GRID_GAP = 14;
+const CARD_WIDTH = (SCREEN_WIDTH - 32 - GRID_GAP) / 2;
+const CARD_HEIGHT = CARD_WIDTH * 1.48;
+
+interface MatchItem {
+  id: string;
+  name: string;
+  age: number;
+  gender: 'bride' | 'groom';
+  currentCity: string;
+  currentCountry: string;
+  distance: string;
+  distanceKm: number;
+  matchScore: number;
+  isOnline: boolean;
+  photos: string[];
+  about?: string;
+  lifestyle?: any;
+  educationCareer?: any;
+}
+
+const MATCHES_DATA: MatchItem[] = [
+  {
+    id: 'm_1',
+    name: 'Marvin',
+    age: 22,
+    gender: 'bride',
+    currentCity: 'NEWYORK',
+    currentCountry: 'USA',
+    distance: '12.6 km away',
+    distanceKm: 12.6,
+    matchScore: 90,
+    isOnline: true,
+    photos: [
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80',
+    ],
+    about: 'Passionate about creative art, photography, culture and discovering meaningful connections.',
+    lifestyle: { heightCm: 175, languagesKnown: ['English'] },
+  },
+  {
+    id: 'm_2',
+    name: 'Marvin',
+    age: 22,
+    gender: 'bride',
+    currentCity: 'NEWYORK',
+    currentCountry: 'USA',
+    distance: '12.6 km away',
+    distanceKm: 12.6,
+    matchScore: 90,
+    isOnline: true,
+    photos: [
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80',
+    ],
+    about: 'Loves flowers, morning sunshine, travel and meaningful life conversations.',
+    lifestyle: { heightCm: 168, languagesKnown: ['English'] },
+  },
+  {
+    id: 'm_3',
+    name: 'Marvin',
+    age: 22,
+    gender: 'bride',
+    currentCity: 'NEWYORK',
+    currentCountry: 'USA',
+    distance: '12.6 km away',
+    distanceKm: 12.6,
+    matchScore: 90,
+    isOnline: true,
+    photos: [
+      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80',
+    ],
+    about: 'Architect by profession, dreamer at heart. Enjoys gardening and reading.',
+    lifestyle: { heightCm: 170, languagesKnown: ['English'] },
+  },
+  {
+    id: 'm_4',
+    name: 'Marvin',
+    age: 22,
+    gender: 'bride',
+    currentCity: 'NEWYORK',
+    currentCountry: 'USA',
+    distance: '12.6 km away',
+    distanceKm: 12.6,
+    matchScore: 90,
+    isOnline: true,
+    photos: [
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
+    ],
+    about: 'Software engineer living in Manhattan. Enjoys museums and acoustic music.',
+    lifestyle: { heightCm: 172, languagesKnown: ['English'] },
+  },
+  {
+    id: 'm_5',
+    name: 'Marvin',
+    age: 22,
+    gender: 'bride',
+    currentCity: 'NEWYORK',
+    currentCountry: 'USA',
+    distance: '12.6 km away',
+    distanceKm: 12.6,
+    matchScore: 90,
+    isOnline: true,
+    photos: [
+      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80',
+    ],
+    about: 'Creative director, loves literature, design and thoughtful conversations.',
+    lifestyle: { heightCm: 165, languagesKnown: ['English'] },
+  },
+  {
+    id: 'm_6',
+    name: 'Marvin',
+    age: 22,
+    gender: 'bride',
+    currentCity: 'NEWYORK',
+    currentCountry: 'USA',
+    distance: '12.6 km away',
+    distanceKm: 12.6,
+    matchScore: 90,
+    isOnline: true,
+    photos: [
+      'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
+    ],
+    about: 'Classical dancer and medical student. Values tradition and family bonds.',
+    lifestyle: { heightCm: 163, languagesKnown: ['English', 'Tamil'] },
+  },
+];
 
 interface InterestsScreenProps {
   language: Language;
-  onToggleLanguage: () => void;
-  onNotificationPress: () => void;
-  onAdminPress: () => void;
+  onToggleLanguage?: () => void;
+  onNotificationPress?: () => void;
+  onAdminPress?: () => void;
   onProfilePress: (profile: MatrimonyProfile) => void;
-  onChatPress: (profile: MatrimonyProfile) => void;
-  unreadCount: number;
-  isAdmin: boolean;
+  onChatPress?: (profile: MatrimonyProfile) => void;
+  onBack?: () => void;
+  unreadCount?: number;
+  isAdmin?: boolean;
 }
-
-/* ─── Circular Ring Gauge Helper ───────────────────────────────────────────── */
-const RingGauge: React.FC<{
-  value: number;
-  max?: number;
-  size?: number;
-  strokeWidth?: number;
-  color?: string;
-  trackColor?: string;
-  label: string;
-  unit: string;
-}> = ({
-  value,
-  max = 100,
-  size = 52,
-  strokeWidth = 3.5,
-  color = PALETTE.amberHeaderDark,
-  trackColor = '#EFE8DC',
-  label,
-  unit,
-}) => {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const progress = Math.min(value / max, 1);
-  const strokeDashoffset = circumference - circumference * progress;
-
-  return (
-    <View style={styles.gaugeContainer}>
-      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-        <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
-          <Circle cx={size / 2} cy={size / 2} r={radius} stroke={trackColor} strokeWidth={strokeWidth} fill="none" />
-          <Circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke={color}
-            strokeWidth={strokeWidth}
-            strokeDasharray={`${circumference} ${circumference}`}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-            fill="none"
-          />
-        </Svg>
-        <Text style={styles.gaugeValueText}>{label}</Text>
-      </View>
-      <Text style={styles.gaugeUnitText}>{unit}</Text>
-    </View>
-  );
-};
 
 export const InterestsScreen: React.FC<InterestsScreenProps> = ({
   language,
-  onToggleLanguage,
-  onNotificationPress,
-  onAdminPress,
   onProfilePress,
-  onChatPress,
-  unreadCount,
-  isAdmin,
+  onBack,
 }) => {
   const insets = useSafeAreaInsets();
   const isTa = language === 'ta';
-  const t = Translations[language];
 
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [currentProfile, setCurrentProfile] = useState<MatrimonyProfile | null>(null);
-  const [interests, setInterests] = useState<InterestRecord[]>([]);
-  const [profilesMap, setProfilesMap] = useState<Record<string, MatrimonyProfile>>({});
-  const [tab, setTab] = useState<'received' | 'sent' | 'accepted' | 'declined'>('received');
+  const [activeFilter, setActiveFilter] = useState<'All' | 'Online' | 'Newest' | 'Nearest' | 'Mutual'>('Online');
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [matches, setMatches] = useState<MatchItem[]>(MATCHES_DATA);
 
-  const loadData = async () => {
-    const user = await StorageService.getCurrentUser();
-    setCurrentUser(user);
+  const filterTabs = [
+    { key: 'All', label: isTa ? 'அனைத்தும்' : 'All' },
+    { key: 'Online', label: isTa ? 'ஆன்லைன்' : 'Online' },
+    { key: 'Newest', label: isTa ? 'புதியவை' : 'Newest' },
+    { key: 'Nearest', label: isTa ? 'அருகிலுள்ளவை' : 'Nearest' },
+    { key: 'Mutual', label: isTa ? 'பொருத்தம்' : 'Mutual' },
+  ];
 
-    const curr = await StorageService.getProfileById(user.activeProfileId);
-    setCurrentProfile(curr);
-
-    const intList = await StorageService.getInterests();
-    setInterests(intList);
-
-    const profiles = await StorageService.getAllProfiles();
-    const map: Record<string, MatrimonyProfile> = {};
-    profiles.forEach(p => {
-      map[p.id] = p;
-    });
-    setProfilesMap(map);
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const handleAccept = async (interestId: string) => {
-    await StorageService.updateInterestStatus(interestId, 'accepted');
-    await loadData();
-  };
-
-  const handleDecline = async (interestId: string) => {
-    await StorageService.updateInterestStatus(interestId, 'declined');
-    await loadData();
-  };
-
-  if (!currentUser) return null;
-
-  // Filter lists based on tab
-  const receivedList = interests.filter(
-    i => i.receiverProfileId === currentUser.activeProfileId && i.status === 'pending'
-  );
-  const sentList = interests.filter(i => i.senderProfileId === currentUser.activeProfileId);
-  const acceptedList = interests.filter(
-    i =>
-      (i.senderProfileId === currentUser.activeProfileId ||
-        i.receiverProfileId === currentUser.activeProfileId) &&
-      i.status === 'accepted'
-  );
-  const declinedList = interests.filter(
-    i =>
-      (i.senderProfileId === currentUser.activeProfileId ||
-        i.receiverProfileId === currentUser.activeProfileId) &&
-      i.status === 'declined'
-  );
-
-  let currentItems = receivedList;
-  if (tab === 'sent') currentItems = sentList;
-  if (tab === 'accepted') currentItems = acceptedList;
-  if (tab === 'declined') currentItems = declinedList;
+  const filteredMatches = matches.filter(m => {
+    if (activeFilter === 'Online') return m.isOnline;
+    if (activeFilter === 'Nearest') return m.distanceKm <= 15;
+    return true;
+  });
 
   return (
-    <View style={styles.root}>
+    <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      {/* ── 1. WARM GOLDEN AMBER HEADER ZONE ──────────────────────────────── */}
-      <View style={[styles.amberHeaderZone, { paddingTop: Math.max(insets.top, 12) }]}>
-        {/* Top Bar Row */}
-        <View style={styles.topBarRow}>
-          <View style={styles.brandRow}>
-            <View style={styles.brandLogoCircle}>
-              <Image
-                source={require('../assets/images/logo.png')}
-                style={{ width: 20, height: 20 }}
-                resizeMode="contain"
-              />
-            </View>
-            <View style={styles.brandTextWrap}>
-              <Text style={styles.brandTitleText}>மணமாலை</Text>
-              <Text style={styles.brandSubTitleText}>INTERESTS DESK</Text>
-            </View>
-          </View>
+      {/* ─── 1. Header (Back, Title, Filter Button) ──────────────────────── */}
+      <View style={[styles.headerRow, { paddingTop: Math.max(insets.top + 6, 14) }]}>
+        {/* Back Button */}
+        <TouchableOpacity
+          style={styles.circleHeaderBtn}
+          onPress={onBack}
+          activeOpacity={0.8}
+        >
+          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#18181D" strokeWidth={2.5}>
+            <Path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+          </Svg>
+        </TouchableOpacity>
 
-          <View style={styles.topBarActions}>
-            <TouchableOpacity style={styles.langSwitchPill} onPress={onToggleLanguage} activeOpacity={0.8}>
-              <Text style={styles.langPillText}>{isTa ? 'English' : 'தமிழ்'}</Text>
-            </TouchableOpacity>
+        {/* Title */}
+        <Text style={styles.headerTitle}>
+          {isTa ? 'பொருத்தங்கள்' : 'Matches'}
+        </Text>
 
-            <TouchableOpacity style={styles.bellBtn} onPress={onNotificationPress} activeOpacity={0.8}>
-              <CustomIcon name="bell" size={19} color="#1C1614" />
-              {unreadCount > 0 && <View style={styles.bellBadgeDot} />}
-            </TouchableOpacity>
+        {/* Filter Button */}
+        <TouchableOpacity
+          style={styles.circleHeaderBtn}
+          onPress={() => setFilterModalVisible(true)}
+          activeOpacity={0.8}
+        >
+          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#18181D" strokeWidth={2.4}>
+            <Path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" strokeLinejoin="round" />
+          </Svg>
+        </TouchableOpacity>
+      </View>
 
-            <View style={styles.avatarWrap}>
-              <Image
-                source={{
-                  uri:
-                    currentProfile?.photos?.[0] ||
-                    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-                }}
-                style={styles.avatarImage}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Segmented Header Tabs */}
-        <View style={styles.headerTabsRow}>
-          {[
-            { id: 'received', label: isTa ? 'வந்தவை' : 'Received', count: receivedList.length },
-            { id: 'sent', label: isTa ? 'அனுப்பியவை' : 'Sent', count: sentList.length },
-            { id: 'accepted', label: isTa ? 'ஏற்றவை' : 'Accepted', count: acceptedList.length },
-            { id: 'declined', label: isTa ? 'மறுத்தவை' : 'Declined', count: declinedList.length },
-          ].map(item => {
-            const isActive = tab === item.id;
+      {/* ─── 2. Filter Tabs Horizontal Row ───────────────────────────────── */}
+      <View style={styles.filterTabsWrap}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterTabsContainer}
+        >
+          {filterTabs.map(tab => {
+            const isActive = activeFilter === tab.key;
             return (
               <TouchableOpacity
-                key={item.id}
-                style={[styles.headerTabBtn, isActive && styles.headerTabBtnActive]}
-                onPress={() => setTab(item.id as any)}
-                activeOpacity={0.85}
+                key={tab.key}
+                style={[styles.filterChip, isActive && styles.filterChipActive]}
+                onPress={() => setActiveFilter(tab.key as any)}
+                activeOpacity={0.8}
               >
-                <Text style={[styles.headerTabText, isActive && styles.headerTabTextActive]}>
-                  {item.label}
+                <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                  {tab.label}
                 </Text>
-                <View style={[styles.countBadge, isActive && { backgroundColor: '#F5ECE3' }]}>
-                  <Text style={[styles.countBadgeText, isActive && { color: PALETTE.maroon }]}>
-                    {item.count}
-                  </Text>
-                </View>
               </TouchableOpacity>
             );
           })}
-        </View>
-
-        {/* Floating White Metric Card */}
-        <View style={styles.metricCard}>
-          <View style={styles.metricCardHeader}>
-            <Text style={styles.metricCardSubhead}>
-              {isTa ? 'விருப்பங்கள் மற்றும் உரையாடல் நிலவரம்' : 'Matchmaking Requests Overview'}
-            </Text>
-            <View style={styles.activeTag}>
-              <Text style={styles.activeTagText}>Active</Text>
-            </View>
-          </View>
-
-          <View style={styles.gaugesRow}>
-            <RingGauge value={receivedList.length} max={20} label={`${receivedList.length}`} unit={isTa ? 'வந்தவை' : 'RECEIVED'} color="#E5A914" />
-            <View style={styles.gaugeDivider} />
-            <RingGauge value={acceptedList.length} max={15} label={`${acceptedList.length}`} unit={isTa ? 'ஏற்றவை' : 'ACCEPTED'} color="#6A7A14" />
-            <View style={styles.gaugeDivider} />
-            <RingGauge value={sentList.length} max={25} label={`${sentList.length}`} unit={isTa ? 'அனுப்பியவை' : 'SENT'} color="#D17575" />
-          </View>
-        </View>
+        </ScrollView>
       </View>
 
-      {/* ── 2. INTERESTS LIST ────────────────────────────────────────────── */}
+      {/* ─── 3. 2-Column Matches Grid ────────────────────────────────────── */}
       <FlatList
-        data={currentItems}
+        data={filteredMatches}
         keyExtractor={item => item.id}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 90 }]}
+        numColumns={2}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item, index }) => {
-          const otherProfileId =
-            item.senderProfileId === currentUser.activeProfileId
-              ? item.receiverProfileId
-              : item.senderProfileId;
-          const otherProfile = profilesMap[otherProfileId];
+        contentContainerStyle={[
+          styles.gridContainer,
+          { paddingBottom: Math.max(insets.bottom + 105, 125) },
+        ]}
+        columnWrapperStyle={styles.columnWrapper}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.cardContainer}
+            activeOpacity={0.92}
+            onPress={() => onProfilePress(item as any as MatrimonyProfile)}
+          >
+            {/* Background Image */}
+            <Image source={{ uri: item.photos[0] }} style={styles.cardImage} resizeMode="cover" />
 
-          if (!otherProfile) return null;
+            {/* Top-Left Match Badge */}
+            <View style={styles.matchBadge}>
+              <Text style={styles.matchBadgeText}>{item.matchScore}% Match</Text>
+            </View>
 
-          const isReceivedPending =
-            tab === 'received' && item.receiverProfileId === currentUser.activeProfileId;
-          const isTopFeatured = index === 0 && isReceivedPending;
+            {/* Top-Right Online Status Dot */}
+            {item.isOnline && (
+              <View style={styles.onlineDotWrapper}>
+                <View style={styles.onlineDot} />
+              </View>
+            )}
 
-          // Featured Top Pending Item in Deep Obsidian Card (#1A1C1E)
-          if (isTopFeatured) {
-            return (
-              <View style={styles.obsidianCard}>
-                <View style={styles.obsidianBadgeRow}>
-                  <View style={styles.obsidianBadge}>
-                    <Text style={styles.obsidianBadgeText}>NEW INTEREST</Text>
-                  </View>
-                  <Text style={styles.obsidianTimeText}>Today</Text>
-                </View>
+            {/* Bottom Gradient Overlay & Info */}
+            <View style={styles.cardBottomOverlay}>
+              {/* Distance Capsule */}
+              <View style={styles.distanceBadge}>
+                <Text style={styles.distanceText}>{item.distance}</Text>
+              </View>
 
-                <TouchableOpacity
-                  style={styles.cardHeaderRow}
-                  onPress={() => onProfilePress(otherProfile)}
-                  activeOpacity={0.88}
-                >
-                  <Image source={{ uri: otherProfile.photos[0] }} style={styles.obsidianAvatar} />
-                  <View style={{ flex: 1, marginLeft: 12 }}>
-                    <Text style={styles.obsidianName}>{otherProfile.name.split(',')[0]}, {otherProfile.age}</Text>
-                    <Text style={styles.obsidianJob} numberOfLines={1}>{otherProfile.educationCareer.occupation}</Text>
-                    <Text style={styles.obsidianCity}>{otherProfile.caste} • {otherProfile.currentCity}</Text>
-                  </View>
-                </TouchableOpacity>
-
-                {item.message ? (
-                  <View style={styles.obsidianMessageBox}>
-                    <Text style={styles.obsidianMessageText} numberOfLines={2}>"{item.message}"</Text>
-                  </View>
-                ) : null}
-
-                <View style={styles.obsidianActionRow}>
-                  <TouchableOpacity style={styles.obsidianDeclineBtn} onPress={() => handleDecline(item.id)} activeOpacity={0.8}>
-                    <Text style={styles.obsidianDeclineText}>{isTa ? 'மறுக்க' : 'Decline'}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.obsidianAcceptBtn} onPress={() => handleAccept(item.id)} activeOpacity={0.88}>
-                    <Text style={styles.obsidianAcceptText}>✓ {isTa ? 'ஏற்றுக்கொள்' : 'Accept Interest'}</Text>
-                  </TouchableOpacity>
+              {/* Name & Age Row */}
+              <View style={styles.nameRow}>
+                <Text style={styles.nameText}>{item.name},{item.age}</Text>
+                {/* Yellow Verified Badge */}
+                <View style={styles.verifiedBadge}>
+                  <Svg width={10} height={10} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M5 13l4 4L19 7"
+                      stroke="#18181D"
+                      strokeWidth="3.4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
                 </View>
               </View>
-            );
+
+              {/* Location Subtitle */}
+              <Text style={styles.locationText}>
+                {`${item.currentCity}, ${item.currentCountry}`.toUpperCase()}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+      />
+
+      {/* ─── 4. Filter Modal ─────────────────────────────────────────────── */}
+      <HomeFilterModal
+        visible={filterModalVisible}
+        currentLocation="New York, USA"
+        onClose={() => setFilterModalVisible(false)}
+        onApply={(filters: FilterState) => {
+          let updated = [...MATCHES_DATA];
+          if (filters.interestedIn === 'Women') {
+            updated = updated.filter(p => p.gender === 'bride');
+          } else if (filters.interestedIn === 'Men') {
+            updated = updated.filter(p => p.gender === 'groom');
           }
-
-          // Standard White Luxury Cards
-          return (
-            <View style={styles.card}>
-              <TouchableOpacity
-                style={styles.cardMainRow}
-                onPress={() => onProfilePress(otherProfile)}
-                activeOpacity={0.8}
-              >
-                <Image source={{ uri: otherProfile.photos[0] }} style={styles.avatar} />
-
-                <View style={styles.infoCol}>
-                  <View style={styles.nameRow}>
-                    <Text style={styles.nameText} numberOfLines={1}>
-                      {otherProfile.name.split(',')[0]}, {otherProfile.age}
-                    </Text>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        item.status === 'accepted'
-                          ? { backgroundColor: PALETTE.oliveSoft }
-                          : item.status === 'pending'
-                          ? { backgroundColor: '#FDF1DC' }
-                          : { backgroundColor: '#FCEAEA' },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.statusBadgeText,
-                          item.status === 'accepted' && { color: PALETTE.olive },
-                          item.status === 'pending' && { color: '#9E6E00' },
-                          item.status === 'declined' && { color: PALETTE.rose },
-                        ]}
-                      >
-                        {item.status.toUpperCase()}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Text style={styles.subText}>
-                    {otherProfile.caste} • {otherProfile.currentCity}
-                  </Text>
-                  <Text style={styles.occupationText} numberOfLines={1}>
-                    {otherProfile.educationCareer.occupation}
-                  </Text>
-
-                  {item.message && (
-                    <Text style={styles.messageBox} numberOfLines={2}>
-                      "{item.message}"
-                    </Text>
-                  )}
-                </View>
-              </TouchableOpacity>
-
-              {/* Action Buttons */}
-              {isReceivedPending ? (
-                <View style={styles.actionRow}>
-                  <TouchableOpacity style={styles.declineBtn} onPress={() => handleDecline(item.id)} activeOpacity={0.8}>
-                    <Text style={styles.declineBtnText}>{isTa ? 'மறுக்க' : 'Decline'}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.acceptBtn} onPress={() => handleAccept(item.id)} activeOpacity={0.85}>
-                    <Text style={styles.acceptBtnText}>{isTa ? 'ஏற்றுக்கொள்' : 'Accept'}</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : item.status === 'accepted' ? (
-                <View style={styles.actionRow}>
-                  <TouchableOpacity style={styles.chatBtn} onPress={() => onChatPress(otherProfile)} activeOpacity={0.85}>
-                    <CustomIcon name="message" size={16} color="#FFFFFF" />
-                    <Text style={styles.chatBtnText}>{isTa ? 'உரையாடலைத் தொடங்கு' : 'Start Conversation'}</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : null}
-            </View>
+          updated = updated.filter(
+            p => p.distanceKm >= filters.minDistance && p.distanceKm <= filters.maxDistance
           );
+          setMatches(updated);
         }}
-        ListEmptyComponent={
-          <View style={styles.emptyWrap}>
-            <View style={styles.emptyIconCircle}>
-              <CustomIcon name="heart" size={28} color={PALETTE.amberHeaderDark} />
-            </View>
-            <Text style={styles.emptyTitle}>
-              {isTa ? 'விருப்பங்கள் எதுவும் இல்லை' : `No ${tab} interests yet`}
-            </Text>
-            <Text style={styles.emptySub}>
-              {isTa
-                ? 'உங்கள் தேடல் அளவுகோல்களை சரிபார்த்து புதிய வரன்களை கண்டறியவும்.'
-                : 'Explore daily recommendations and connect with matching profiles.'}
-            </Text>
-          </View>
-        }
+        isTa={isTa}
       />
     </View>
   );
 };
 
-/* ─── Stylesheet ───────────────────────────────────────────────────────────── */
 const styles = StyleSheet.create({
-  root: {
+  container: {
     flex: 1,
-    backgroundColor: PALETTE.pageBg,
+    backgroundColor: '#FFFFFF',
   },
-  amberHeaderZone: {
-    backgroundColor: PALETTE.amberHeader,
-    paddingHorizontal: 20,
-    paddingBottom: 22,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    shadowColor: '#8C6700',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  topBarRow: {
+
+  /* Header */
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
   },
-  brandRow: {
-    flexDirection: 'row',
+  circleHeaderBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#18181D',
+  },
+
+  /* Filter Tabs */
+  filterTabsWrap: {
+    paddingVertical: 8,
+  },
+  filterTabsContainer: {
+    paddingHorizontal: 16,
     gap: 10,
   },
-  brandLogoCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#1C1614',
-    alignItems: 'center',
-    justifyContent: 'center',
+  filterChip: {
+    paddingHorizontal: 22,
+    paddingVertical: 9,
+    borderRadius: 22,
+    backgroundColor: '#F3F4F6',
   },
-  brandTextWrap: {
-    flexDirection: 'column',
+  filterChipActive: {
+    backgroundColor: BRAND_PURPLE,
   },
-  brandTitleText: {
-    fontSize: 19,
-    fontWeight: '800',
-    color: '#1C1614',
-    letterSpacing: 0.3,
+  filterChipText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4B5563',
   },
-  brandSubTitleText: {
-    fontSize: 9.5,
+  filterChipTextActive: {
+    color: '#FFFFFF',
     fontWeight: '700',
-    color: 'rgba(28, 22, 20, 0.72)',
-    letterSpacing: 1.2,
   },
-  topBarActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+
+  /* 2-Column Grid */
+  gridContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
-  langSwitchPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.45)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.65)',
+  columnWrapper: {
+    justifyContent: 'space-between',
+    marginBottom: GRID_GAP,
   },
-  langPillText: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#1C1614',
-  },
-  bellBtn: {
-    width: 36,
-    height: 36,
+  cardContainer: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.65)',
-  },
-  bellBadgeDot: {
-    position: 'absolute',
-    top: 7,
-    right: 7,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: PALETTE.redDot,
-  },
-  avatarWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
     overflow: 'hidden',
+    backgroundColor: '#1E1E24',
+    position: 'relative',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  avatarImage: {
+  cardImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: '100%',
     height: '100%',
   },
-  headerTabsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
-  },
-  headerTabBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    borderRadius: 18,
-    gap: 5,
-  },
-  headerTabBtnActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#8C6700',
+
+  /* Match Badge */
+  matchBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: BRAND_PURPLE,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    shadowColor: BRAND_PURPLE,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
     elevation: 3,
   },
-  headerTabText: {
-    fontSize: 12,
+  matchBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
     fontWeight: '700',
-    color: 'rgba(28, 22, 20, 0.75)',
-  },
-  headerTabTextActive: {
-    color: '#1C1614',
-    fontWeight: '800',
-  },
-  countBadge: {
-    backgroundColor: 'rgba(28, 22, 20, 0.10)',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 8,
-  },
-  countBadgeText: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    color: '#1C1614',
-  },
-  metricCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    shadowColor: '#3A271D',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 6,
-  },
-  metricCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  metricCardSubhead: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: PALETTE.textMuted,
-  },
-  activeTag: {
-    backgroundColor: PALETTE.oliveSoft,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  activeTagText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: PALETTE.olive,
-  },
-  gaugesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-  },
-  gaugeContainer: {
-    alignItems: 'center',
-  },
-  gaugeValueText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#1C1614',
-  },
-  gaugeUnitText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: PALETTE.textMuted,
-    marginTop: 4,
-    letterSpacing: 0.3,
-  },
-  gaugeDivider: {
-    width: 1,
-    height: 36,
-    backgroundColor: '#F0ECE3',
-  },
-  listContent: {
-    paddingHorizontal: 18,
-    paddingTop: 18,
   },
 
-  /* Obsidian Featured Card */
-  obsidianCard: {
-    backgroundColor: PALETTE.obsidianCard,
-    borderRadius: 24,
-    padding: 16,
-    marginBottom: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.16,
-    shadowRadius: 14,
-    elevation: 7,
-  },
-  obsidianBadgeRow: {
-    flexDirection: 'row',
+  /* Online Dot */
+  onlineDotWrapper: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
+    justifyContent: 'center',
   },
-  obsidianBadge: {
-    backgroundColor: 'rgba(247, 191, 42, 0.16)',
+  onlineDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#22C55E',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+
+  /* Bottom Overlay */
+  cardBottomOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 10,
+    backgroundColor: 'rgba(24, 24, 29, 0.45)',
+  },
+  distanceBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.35)',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(247, 191, 42, 0.35)',
+    borderRadius: 12,
+    marginBottom: 6,
   },
-  obsidianBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: PALETTE.amberHeader,
-  },
-  obsidianTimeText: {
+  distanceText: {
     fontSize: 11,
-    color: PALETTE.obsidianMuted,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  obsidianAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#2E3238',
-  },
-  obsidianName: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  obsidianJob: {
-    fontSize: 12,
-    color: PALETTE.obsidianMuted,
-    marginBottom: 2,
-  },
-  obsidianCity: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.65)',
-  },
-  obsidianMessageBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 10,
-    borderRadius: 12,
-    marginTop: 10,
-  },
-  obsidianMessageText: {
-    fontSize: 12,
-    color: '#EFE8DC',
-    fontStyle: 'italic',
-  },
-  obsidianActionRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 14,
-  },
-  obsidianDeclineBtn: {
-    flex: 1,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  obsidianDeclineText: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  obsidianAcceptBtn: {
-    flex: 2,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: PALETTE.amberHeader,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  obsidianAcceptText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#1C1614',
-  },
-
-  /* White Standard Card */
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 14,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: PALETTE.cardBorder,
-    shadowColor: '#3A271D',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  cardMainRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#EAE4DA',
-  },
-  infoCol: {
-    flex: 1,
-    marginLeft: 12,
   },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 2,
+    gap: 4,
   },
   nameText: {
     fontSize: 15,
     fontWeight: '700',
-    color: PALETTE.textInk,
-  },
-  statusBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  statusBadgeText: {
-    fontSize: 9.5,
-    fontWeight: '800',
-  },
-  subText: {
-    fontSize: 11.5,
-    color: PALETTE.textMuted,
-    marginBottom: 1,
-  },
-  occupationText: {
-    fontSize: 11,
-    color: PALETTE.textSecondary,
-    marginBottom: 4,
-  },
-  messageBox: {
-    fontSize: 11.5,
-    color: PALETTE.maroon,
-    fontStyle: 'italic',
-    marginTop: 2,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F5EFE6',
-  },
-  declineBtn: {
-    flex: 1,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#F5EFE6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  declineBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: PALETTE.textSecondary,
-  },
-  acceptBtn: {
-    flex: 1.5,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: PALETTE.amberHeader,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  acceptBtnText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#1C1614',
-  },
-  chatBtn: {
-    flex: 1,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: PALETTE.maroon,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  chatBtnText: {
-    fontSize: 12.5,
-    fontWeight: '700',
     color: '#FFFFFF',
   },
-  emptyWrap: {
+  verifiedBadge: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#FACC15',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 48,
-    paddingHorizontal: 24,
   },
-  emptyIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#FCE6BE',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-  },
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: PALETTE.textInk,
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  emptySub: {
-    fontSize: 13,
-    color: PALETTE.textMuted,
-    textAlign: 'center',
-    lineHeight: 18,
+  locationText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.85)',
+    letterSpacing: 0.6,
+    marginTop: 2,
   },
 });

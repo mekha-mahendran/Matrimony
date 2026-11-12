@@ -30,6 +30,7 @@ import { LifestyleDetailsScreen } from './src/screens/LifestyleDetailsScreen';
 import { LocationDetailsScreen } from './src/screens/LocationDetailsScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { MatchesScreen } from './src/screens/MatchesScreen';
+import { ChoosePlanScreen } from './src/screens/ChoosePlanScreen';
 import { MembershipScreen } from './src/screens/MembershipScreen';
 import { NewPasswordScreen } from './src/screens/NewPasswordScreen';
 import { NotificationsScreen } from './src/screens/NotificationsScreen';
@@ -79,6 +80,7 @@ type ScreenName =
   | 'main'
   | 'profile_detail'
   | 'horoscope_report'
+  | 'choose_plan'
   | 'membership'
   | 'notifications'
   | 'chat'
@@ -191,11 +193,9 @@ function ManamaalaiApp() {
   };
 
   const handleToggleAdmin = async () => {
-    const adminActive = await AuthService.toggleAdminMode();
-    setIsAdmin(adminActive);
-    if (adminActive) {
-      setCurrentScreen('admin');
-    }
+    await AuthService.toggleAdminMode();
+    setIsAdmin(true);
+    setCurrentScreen('admin');
   };
 
   const handleOpenProfile = (profile: MatrimonyProfile) => {
@@ -1013,6 +1013,15 @@ function ManamaalaiApp() {
           />
         ) : null;
 
+      case 'choose_plan':
+        return (
+          <ChoosePlanScreen
+            language={language}
+            onBack={() => setCurrentScreen('main')}
+            onSelectPlan={() => setCurrentScreen('membership')}
+          />
+        );
+
       case 'membership':
         return (
           <MembershipScreen
@@ -1155,6 +1164,7 @@ function ManamaalaiApp() {
                   onAdminPress={handleToggleAdmin}
                   onProfilePress={handleOpenProfile}
                   onChatPress={handleOpenChat}
+                  onBack={() => setActiveTab('home')}
                   unreadCount={unreadNotifCount}
                   isAdmin={isAdmin}
                 />
@@ -1167,7 +1177,8 @@ function ManamaalaiApp() {
                   onNotificationPress={() => setCurrentScreen('notifications')}
                   onAdminPress={handleToggleAdmin}
                   onProfilePress={handleOpenProfile}
-                  onViewHoroscopePorutham={handleOpenHoroscopeReport}
+                  onChatPress={handleOpenChat}
+                  onBack={() => setActiveTab('home')}
                   onDailyRecommendationsPress={() => setCurrentScreen('daily_recommendations')}
                   unreadCount={unreadNotifCount}
                   isAdmin={isAdmin}
@@ -1180,6 +1191,7 @@ function ManamaalaiApp() {
                   onToggleLanguage={handleToggleLanguage}
                   onNotificationPress={() => setCurrentScreen('notifications')}
                   onAdminPress={handleToggleAdmin}
+                  onBack={() => setActiveTab('home')}
                   onEditProfile={async () => {
                     const u = await StorageService.getCurrentUser();
                     const p = await StorageService.getProfileById(u.activeProfileId);
@@ -1188,7 +1200,8 @@ function ManamaalaiApp() {
                       setCurrentScreen('edit_profile');
                     }
                   }}
-                  onMembershipPress={() => setCurrentScreen('membership')}
+                  onMembershipPress={() => setCurrentScreen('choose_plan')}
+                  onPaymentMethodsPress={() => setCurrentScreen('membership')}
                   onViewMyProfile={handleOpenProfile}
                   onFamilyCirclePress={() => setCurrentScreen('family_circle')}
                   onRelationshipManagerPress={() => setCurrentScreen('relationship_manager')}

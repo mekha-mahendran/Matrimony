@@ -1,24 +1,29 @@
 /**
- * Manamaalai Matrimony (மணமாலை) — Modern Golden Search & Discover Screen
+ * Manamaalai Matrimony — Map Discovery & Nearby Matches Screen (2nd Tab)
  *
- * Implements the unified golden-amber dashboard styling:
- * - Warm Golden Amber Hero Header (#F7BF2A)
- * - Search Bar & Filter trigger embedded directly inside the amber header
- * - Floating White Metric Card with 3 Circular Ring Progress Gauges:
- *     1. Matching Candidates Found
- *     2. Active Filter Count
- *     3. 100% Verified Profiles
- * - Quick Category Filter Chips & Sort Options
- * - 2-Column Luxury Grid with Heart Shortlist & Connect Actions
+ * Implements the exact design from the reference screenshot:
+ * - Fullscreen interactive light-mode street map with NYC street names (Broadway, Reade St, Chambers St, etc.)
+ * - Top Search bar with purple search icon & purple filter button
+ * - Circular profile avatar pins with purple rings and distance badges (1.2 Km, 1.4 Km, 1.8 Km, etc.)
+ * - Current user GPS marker with pulsing translucent purple halo ring and directional arrow
+ * - White circular GPS recenter FAB button with purple crosshairs
+ * - Floating horizontal preview card carousel at bottom:
+ *     - Avatar, Name & Age (e.g. "Marvin, 22 ✓"), Location ("NEWYORK, USA")
+ *     - Purple circular action button with white heart icon
+ *     - Next card peeking from the right margin
+ * - Connected with HomeFilterModal and profile detail navigation
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
+  Alert,
+  Animated,
   Dimensions,
   FlatList,
   Image,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Platform,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -27,773 +32,781 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle } from 'react-native-svg';
-import { CustomIcon } from '../components/CustomIcon';
-import { FilterModal } from '../components/FilterModal';
-import { Language, Translations } from '../localization';
-import { SearchService } from '../services/searchService';
+import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
+import { HomeFilterModal, FilterState } from '../components/HomeFilterModal';
+import { Language } from '../localization';
 import { StorageService } from '../services/storage';
-import { MatrimonyProfile, SearchFilterState } from '../types';
+import { MatrimonyProfile } from '../types';
 
-/* ─── Luxury Design Tokens ─────────────────────────────────────────────────── */
-const PALETTE = {
-  amberHeader: '#F7BF2A',
-  amberHeaderDark: '#E5A914',
-  obsidianCard: '#1A1C1E',
-  pageBg: '#F8F5EE',
-  cardWhite: '#FFFFFF',
-  cardBorder: '#EFE8DC',
-  textInk: '#1C1614',
-  textMuted: '#7A6E67',
-  textSecondary: '#52453F',
-  maroon: '#49141C',
-  olive: '#6A7A14',
-  oliveSoft: '#EEF0D6',
-  rose: '#D17575',
-  redDot: '#E53E3E',
-};
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const BRAND_PURPLE = '#6D53F5';
+const CARD_WIDTH = SCREEN_WIDTH - 64;
+const CARD_SPACING = 14;
 
-const { width: WINDOW_WIDTH } = Dimensions.get('window');
-const GRID_CARD_WIDTH = (Math.min(WINDOW_WIDTH, 430) - 48) / 2;
+interface MapProfile {
+  id: string;
+  name: string;
+  age: number;
+  gender: 'bride' | 'groom';
+  currentCity: string;
+  currentCountry: string;
+  distance: string;
+  distanceKm: number;
+  avatar: string;
+  photos: string[];
+  xPercent: number; // 0 to 100 on map
+  yPercent: number; // 0 to 100 on map
+  about?: string;
+  lifestyle?: any;
+  educationCareer?: any;
+}
+
+const NEARBY_PROFILES: MapProfile[] = [
+  {
+    id: 'disc_1',
+    name: 'Marvin',
+    age: 22,
+    gender: 'bride',
+    currentCity: 'NEWYORK',
+    currentCountry: 'USA',
+    distance: '1.8 Km',
+    distanceKm: 1.8,
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+    photos: [
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80',
+    ],
+    xPercent: 43,
+    yPercent: 39,
+    about: 'Passionate about creative art, photography, culture and discovering meaningful connections.',
+    lifestyle: { heightCm: 175, languagesKnown: ['English'] },
+  },
+  {
+    id: 'disc_2',
+    name: 'Jenny',
+    age: 23,
+    gender: 'bride',
+    currentCity: 'NEWYORK',
+    currentCountry: 'USA',
+    distance: '1.2 Km',
+    distanceKm: 1.2,
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80',
+    photos: [
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80',
+    ],
+    xPercent: 18,
+    yPercent: 16,
+    about: 'Architect by trade, coffee lover, always up for spontaneous weekend trips.',
+    lifestyle: { heightCm: 168, languagesKnown: ['English'] },
+  },
+  {
+    id: 'disc_3',
+    name: 'Leslie',
+    age: 24,
+    gender: 'bride',
+    currentCity: 'NEWYORK',
+    currentCountry: 'USA',
+    distance: '1.4 Km',
+    distanceKm: 1.4,
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80',
+    photos: [
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80',
+    ],
+    xPercent: 72,
+    yPercent: 15,
+    about: 'Software engineer living in Manhattan. Enjoys museums, hiking, and acoustic music.',
+    lifestyle: { heightCm: 170, languagesKnown: ['English'] },
+  },
+  {
+    id: 'disc_4',
+    name: 'Bessie',
+    age: 25,
+    gender: 'bride',
+    currentCity: 'NEWYORK',
+    currentCountry: 'USA',
+    distance: '1.8 Km',
+    distanceKm: 1.8,
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80',
+    photos: [
+      'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
+    ],
+    xPercent: 82,
+    yPercent: 39,
+    about: 'Finance professional, foodie, passionate about arts and theatre.',
+    lifestyle: { heightCm: 165, languagesKnown: ['English'] },
+  },
+  {
+    id: 'disc_5',
+    name: 'Arlene',
+    age: 24,
+    gender: 'bride',
+    currentCity: 'NEWYORK',
+    currentCountry: 'USA',
+    distance: '1.9 Km',
+    distanceKm: 1.9,
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80',
+    photos: [
+      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80',
+    ],
+    xPercent: 23,
+    yPercent: 60,
+    about: 'Creative director, loves literature, design and thoughtful conversations.',
+    lifestyle: { heightCm: 172, languagesKnown: ['English'] },
+  },
+  {
+    id: 'disc_6',
+    name: 'Ananya',
+    age: 23,
+    gender: 'bride',
+    currentCity: 'NEWYORK',
+    currentCountry: 'USA',
+    distance: '2.1 Km',
+    distanceKm: 2.1,
+    avatar: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=300&q=80',
+    photos: [
+      'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
+    ],
+    xPercent: 88,
+    yPercent: 65,
+    about: 'Classical dancer and medical student. Values tradition and family bonds.',
+    lifestyle: { heightCm: 163, languagesKnown: ['English', 'Tamil'] },
+  },
+];
 
 interface SearchScreenProps {
   language: Language;
-  onToggleLanguage: () => void;
-  onNotificationPress: () => void;
-  onAdminPress: () => void;
+  onToggleLanguage?: () => void;
+  onNotificationPress?: () => void;
+  onAdminPress?: () => void;
   onProfilePress: (profile: MatrimonyProfile) => void;
   initialQuery?: string;
-  unreadCount: number;
-  isAdmin: boolean;
+  unreadCount?: number;
+  isAdmin?: boolean;
 }
-
-const DEFAULT_FILTERS: SearchFilterState = {
-  ageMin: 21,
-  ageMax: 38,
-  heightMinCm: 150,
-  heightMaxCm: 195,
-  verifiedOnly: false,
-  withPhotoOnly: false,
-  horoscopePoruthamOnly: false,
-  searchQuery: '',
-  sortBy: 'relevance',
-};
-
-/* ─── Circular Ring Gauge Helper ───────────────────────────────────────────── */
-const RingGauge: React.FC<{
-  value: number;
-  max?: number;
-  size?: number;
-  strokeWidth?: number;
-  color?: string;
-  trackColor?: string;
-  label: string;
-  unit: string;
-}> = ({
-  value,
-  max = 100,
-  size = 52,
-  strokeWidth = 3.5,
-  color = PALETTE.amberHeaderDark,
-  trackColor = '#EFE8DC',
-  label,
-  unit,
-}) => {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const progress = Math.min(value / max, 1);
-  const strokeDashoffset = circumference - circumference * progress;
-
-  return (
-    <View style={styles.gaugeContainer}>
-      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-        <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
-          <Circle cx={size / 2} cy={size / 2} r={radius} stroke={trackColor} strokeWidth={strokeWidth} fill="none" />
-          <Circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke={color}
-            strokeWidth={strokeWidth}
-            strokeDasharray={`${circumference} ${circumference}`}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-            fill="none"
-          />
-        </Svg>
-        <Text style={styles.gaugeValueText}>{label}</Text>
-      </View>
-      <Text style={styles.gaugeUnitText}>{unit}</Text>
-    </View>
-  );
-};
 
 export const SearchScreen: React.FC<SearchScreenProps> = ({
   language,
-  onToggleLanguage,
-  onNotificationPress,
-  onAdminPress,
   onProfilePress,
   initialQuery = '',
-  unreadCount,
-  isAdmin,
 }) => {
   const insets = useSafeAreaInsets();
   const isTa = language === 'ta';
-  const t = Translations[language];
 
-  const [allProfiles, setAllProfiles] = useState<MatrimonyProfile[]>([]);
-  const [currentProfile, setCurrentProfile] = useState<MatrimonyProfile | null>(null);
-  const [shortlists, setShortlists] = useState<string[]>([]);
-  const [filters, setFilters] = useState<SearchFilterState>({
-    ...DEFAULT_FILTERS,
-    searchQuery: initialQuery,
-  });
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [selectedProfileIndex, setSelectedProfileIndex] = useState(0);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState('New York, USA');
+  const [activeProfiles, setActiveProfiles] = useState<MapProfile[]>(NEARBY_PROFILES);
 
-  const loadData = async () => {
-    const user = await StorageService.getCurrentUser();
-    const curr = await StorageService.getProfileById(user.activeProfileId);
-    setCurrentProfile(curr);
+  const flatListRef = useRef<FlatList>(null);
+  const gpsPulseAnim = useRef(new Animated.Value(1)).current;
 
-    const profiles = await StorageService.getAllProfiles();
-    setAllProfiles(profiles);
-
-    const sl = await StorageService.getShortlists();
-    setShortlists(sl);
-  };
-
-  useEffect(() => {
-    loadData();
+  // Pulse animation for user GPS location
+  React.useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(gpsPulseAnim, {
+          toValue: 1.25,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(gpsPulseAnim, {
+          toValue: 1,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
   }, []);
 
-  const handleToggleShortlist = async (profileId: string) => {
-    await StorageService.toggleShortlist(profileId);
-    const updated = await StorageService.getShortlists();
-    setShortlists(updated);
+  // Filter profiles based on search query
+  const displayedProfiles = activeProfiles.filter(p =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.currentCity.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleSelectProfileFromMap = (index: number) => {
+    setSelectedProfileIndex(index);
+    flatListRef.current?.scrollToIndex({
+      index,
+      animated: true,
+      viewPosition: 0.1,
+    });
   };
 
-  const handleSendInterest = async (targetProfileId: string) => {
-    if (!currentProfile) return;
-    await StorageService.sendInterest(currentProfile.id, targetProfileId);
-    await loadData();
+  const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const x = event.nativeEvent.contentOffset.x;
+    const index = Math.round(x / (CARD_WIDTH + CARD_SPACING));
+    if (index >= 0 && index < displayedProfiles.length) {
+      setSelectedProfileIndex(index);
+    }
   };
 
-  const filteredProfiles = SearchService.filterProfiles(allProfiles, filters, currentProfile);
+  const handleSendInterest = (profile: MapProfile) => {
+    StorageService.sendInterest('my_profile', profile.id).catch(() => {});
+    Alert.alert(
+      isTa ? 'விருப்பம் அனுப்பப்பட்டது! 💜' : 'Interest Expressed! 💜',
+      isTa
+        ? `${profile.name} சுயவிவரத்திற்கு உங்கள் விருப்பம் தெரிவிக்கப்பட்டது.`
+        : `You have successfully expressed interest in ${profile.name}.`
+    );
+  };
 
-  const activeFilterCount =
-    (filters.gender ? 1 : 0) +
-    (filters.caste && filters.caste.length > 0 ? 1 : 0) +
-    (filters.district && filters.district.length > 0 ? 1 : 0) +
-    (filters.education && filters.education.length > 0 ? 1 : 0) +
-    (filters.verifiedOnly ? 1 : 0) +
-    (filters.withPhotoOnly ? 1 : 0) +
-    (filters.horoscopePoruthamOnly ? 1 : 0);
+  const handleRecenter = () => {
+    Alert.alert(
+      isTa ? 'தற்போதைய இருப்பிடம்' : 'GPS Location',
+      isTa ? 'உங்கள் இருப்பிடம் சீரமைக்கப்பட்டது: நியூயார்க், அமெரிக்கா' : 'Centered on your current location: New York, USA'
+    );
+  };
+
+  const selectedProfile = displayedProfiles[selectedProfileIndex] || displayedProfiles[0];
 
   return (
-    <View style={styles.root}>
+    <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      {/* ── 1. WARM GOLDEN AMBER HEADER ZONE ──────────────────────────────── */}
-      <View style={[styles.amberHeaderZone, { paddingTop: Math.max(insets.top, 12) }]}>
-        <View style={styles.topBarRow}>
-          <View style={styles.brandRow}>
-            <View style={styles.brandLogoCircle}>
-              <Image
-                source={require('../assets/images/logo.png')}
-                style={{ width: 20, height: 20 }}
-                resizeMode="contain"
-              />
-            </View>
-            <View style={styles.brandTextWrap}>
-              <Text style={styles.brandTitleText}>மணமாலை</Text>
-              <Text style={styles.brandSubTitleText}>DISCOVER & SEARCH</Text>
-            </View>
-          </View>
+      {/* ─── 1. Vector Street Map Background ─────────────────────────────── */}
+      <View style={styles.mapContainer} pointerEvents="box-none">
+        <Svg width={SCREEN_WIDTH} height={SCREEN_HEIGHT} viewBox={`0 0 ${SCREEN_WIDTH} ${SCREEN_HEIGHT}`}>
+          {/* Base Map Land Background */}
+          <Rect x="0" y="0" width={SCREEN_WIDTH} height={SCREEN_HEIGHT} fill="#F7F8FA" />
 
-          <View style={styles.topBarActions}>
-            <TouchableOpacity style={styles.langSwitchPill} onPress={onToggleLanguage} activeOpacity={0.8}>
-              <Text style={styles.langPillText}>{isTa ? 'English' : 'தமிழ்'}</Text>
-            </TouchableOpacity>
+          {/* Major Avenues & Streets (matching NYC Lower Manhattan layout in screenshot) */}
+          <G stroke="#FFFFFF" strokeWidth="24" strokeLinecap="round" strokeLinejoin="round">
+            {/* Broadway (Slanted Major Avenue) */}
+            <Line x1={SCREEN_WIDTH * 0.45} y1="0" x2={SCREEN_WIDTH * 0.95} y2={SCREEN_HEIGHT * 0.45} stroke="#FFFFFF" strokeWidth="26" />
+            {/* Park Row (Slanted Diagonal) */}
+            <Line x1={SCREEN_WIDTH * 0.1} y1={SCREEN_HEIGHT * 0.65} x2={SCREEN_WIDTH * 0.8} y2={SCREEN_HEIGHT * 0.48} stroke="#FFFFFF" strokeWidth="24" />
+            {/* Reade St */}
+            <Line x1="0" y1={SCREEN_HEIGHT * 0.22} x2={SCREEN_WIDTH} y2={SCREEN_HEIGHT * 0.15} />
+            {/* Chambers St */}
+            <Line x1="0" y1={SCREEN_HEIGHT * 0.29} x2={SCREEN_WIDTH} y2={SCREEN_HEIGHT * 0.22} strokeWidth="28" />
+            {/* Warren St */}
+            <Line x1="0" y1={SCREEN_HEIGHT * 0.36} x2={SCREEN_WIDTH * 0.6} y2={SCREEN_HEIGHT * 0.32} />
+            {/* Park Pl */}
+            <Line x1="0" y1={SCREEN_HEIGHT * 0.44} x2={SCREEN_WIDTH * 0.55} y2={SCREEN_HEIGHT * 0.40} />
+            {/* Barclay St */}
+            <Line x1="0" y1={SCREEN_HEIGHT * 0.52} x2={SCREEN_WIDTH * 0.5} y2={SCREEN_HEIGHT * 0.48} />
+            {/* Church St (Vertical Grid) */}
+            <Line x1={SCREEN_WIDTH * 0.18} y1="0" x2={SCREEN_WIDTH * 0.05} y2={SCREEN_HEIGHT} strokeWidth="24" />
+            {/* Spruce St */}
+            <Line x1={SCREEN_WIDTH * 0.55} y1={SCREEN_HEIGHT * 0.55} x2={SCREEN_WIDTH} y2={SCREEN_HEIGHT * 0.65} strokeWidth="20" />
+            {/* Ann St */}
+            <Line x1={SCREEN_WIDTH * 0.15} y1={SCREEN_HEIGHT * 0.68} x2={SCREEN_WIDTH * 0.7} y2={SCREEN_HEIGHT * 0.76} strokeWidth="20" />
+          </G>
 
-            <TouchableOpacity style={styles.bellBtn} onPress={onNotificationPress} activeOpacity={0.8}>
-              <CustomIcon name="bell" size={19} color="#1C1614" />
-              {unreadCount > 0 && <View style={styles.bellBadgeDot} />}
-            </TouchableOpacity>
+          {/* Road Borders & Contours */}
+          <G stroke="#E8EAEF" strokeWidth="1.5" fill="none">
+            <Line x1={SCREEN_WIDTH * 0.45} y1="0" x2={SCREEN_WIDTH * 0.95} y2={SCREEN_HEIGHT * 0.45} />
+            <Line x1="0" y1={SCREEN_HEIGHT * 0.22} x2={SCREEN_WIDTH} y2={SCREEN_HEIGHT * 0.15} />
+            <Line x1="0" y1={SCREEN_HEIGHT * 0.29} x2={SCREEN_WIDTH} y2={SCREEN_HEIGHT * 0.22} />
+            <Line x1="0" y1={SCREEN_HEIGHT * 0.36} x2={SCREEN_WIDTH * 0.6} y2={SCREEN_HEIGHT * 0.32} />
+            <Line x1="0" y1={SCREEN_HEIGHT * 0.44} x2={SCREEN_WIDTH * 0.55} y2={SCREEN_HEIGHT * 0.40} />
+            <Line x1="0" y1={SCREEN_HEIGHT * 0.52} x2={SCREEN_WIDTH * 0.5} y2={SCREEN_HEIGHT * 0.48} />
+            <Line x1={SCREEN_WIDTH * 0.1} y1={SCREEN_HEIGHT * 0.65} x2={SCREEN_WIDTH * 0.8} y2={SCREEN_HEIGHT * 0.48} />
+            <Line x1={SCREEN_WIDTH * 0.55} y1={SCREEN_HEIGHT * 0.55} x2={SCREEN_WIDTH} y2={SCREEN_HEIGHT * 0.65} />
+            <Line x1={SCREEN_WIDTH * 0.15} y1={SCREEN_HEIGHT * 0.68} x2={SCREEN_WIDTH * 0.7} y2={SCREEN_HEIGHT * 0.76} />
+          </G>
 
-            <View style={styles.avatarWrap}>
-              <Image
-                source={{
-                  uri:
-                    currentProfile?.photos?.[0] ||
-                    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-                }}
-                style={styles.avatarImage}
-              />
-            </View>
-          </View>
+          {/* Directional Arrows on Roads */}
+          <G stroke="#D1D5DB" strokeWidth="1.5" fill="none">
+            <Path d={`M ${SCREEN_WIDTH * 0.42} ${SCREEN_HEIGHT * 0.15} l 4 -4 l -4 -4`} />
+            <Path d={`M ${SCREEN_WIDTH * 0.65} ${SCREEN_HEIGHT * 0.3} l -4 4 l 4 4`} />
+            <Path d={`M ${SCREEN_WIDTH * 0.2} ${SCREEN_HEIGHT * 0.4} l 4 -4 l -4 -4`} />
+            <Path d={`M ${SCREEN_WIDTH * 0.45} ${SCREEN_HEIGHT * 0.53} l 4 4 l -4 4`} />
+          </G>
+
+          {/* Street Name Typography (Matching reference screenshot placement) */}
+          {/* Broadway */}
+          <G transform={`translate(${SCREEN_WIDTH * 0.66}, ${SCREEN_HEIGHT * 0.17}) rotate(52)`}>
+            <SvgText fill="#9CA3AF" fontSize="13" fontWeight="600" letterSpacing="0.4">
+              Broadway
+            </SvgText>
+          </G>
+          {/* Reade St */}
+          <G transform={`translate(${SCREEN_WIDTH * 0.30}, ${SCREEN_HEIGHT * 0.20}) rotate(-6)`}>
+            <SvgText fill="#9CA3AF" fontSize="13" fontWeight="600" letterSpacing="0.4">
+              Reade St
+            </SvgText>
+          </G>
+          {/* Chambers St */}
+          <G transform={`translate(${SCREEN_WIDTH * 0.24}, ${SCREEN_HEIGHT * 0.28}) rotate(-6)`}>
+            <SvgText fill="#9CA3AF" fontSize="14" fontWeight="700" letterSpacing="0.4">
+              Chambers St
+            </SvgText>
+          </G>
+          {/* Warren St */}
+          <G transform={`translate(${SCREEN_WIDTH * 0.17}, ${SCREEN_HEIGHT * 0.35}) rotate(-6)`}>
+            <SvgText fill="#9CA3AF" fontSize="13" fontWeight="600" letterSpacing="0.4">
+              Warren St
+            </SvgText>
+          </G>
+          {/* Park Pl */}
+          <G transform={`translate(${SCREEN_WIDTH * 0.05}, ${SCREEN_HEIGHT * 0.43}) rotate(-6)`}>
+            <SvgText fill="#9CA3AF" fontSize="13" fontWeight="600" letterSpacing="0.4">
+              Park Pl
+            </SvgText>
+          </G>
+          {/* Barclay St */}
+          <G transform={`translate(${SCREEN_WIDTH * 0.04}, ${SCREEN_HEIGHT * 0.52}) rotate(-6)`}>
+            <SvgText fill="#9CA3AF" fontSize="13" fontWeight="600" letterSpacing="0.4">
+              Barclay St
+            </SvgText>
+          </G>
+          {/* Church St */}
+          <G transform={`translate(${SCREEN_WIDTH * 0.11}, ${SCREEN_HEIGHT * 0.36}) rotate(-80)`}>
+            <SvgText fill="#9CA3AF" fontSize="13" fontWeight="600" letterSpacing="0.4">
+              Church St
+            </SvgText>
+          </G>
+          {/* Park Row */}
+          <G transform={`translate(${SCREEN_WIDTH * 0.30}, ${SCREEN_HEIGHT * 0.61}) rotate(-16)`}>
+            <SvgText fill="#9CA3AF" fontSize="13" fontWeight="600" letterSpacing="0.4">
+              Park Row
+            </SvgText>
+          </G>
+          {/* Spruce St */}
+          <G transform={`translate(${SCREEN_WIDTH * 0.50}, ${SCREEN_HEIGHT * 0.63}) rotate(16)`}>
+            <SvgText fill="#9CA3AF" fontSize="13" fontWeight="600" letterSpacing="0.4">
+              Spruce St
+            </SvgText>
+          </G>
+          {/* Ann St */}
+          <G transform={`translate(${SCREEN_WIDTH * 0.16}, ${SCREEN_HEIGHT * 0.70}) rotate(16)`}>
+            <SvgText fill="#9CA3AF" fontSize="13" fontWeight="600" letterSpacing="0.4">
+              Ann St
+            </SvgText>
+          </G>
+        </Svg>
+      </View>
+
+      {/* ─── 2. Top Search Bar & Filter Button ───────────────────────────── */}
+      <View style={[styles.topBar, { paddingTop: Math.max(insets.top + 8, 16) }]}>
+        {/* Search Input Bar */}
+        <View style={styles.searchBar}>
+          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={BRAND_PURPLE} strokeWidth={2.4}>
+            <Circle cx="11" cy="11" r="8" />
+            <Path d="M21 21l-4.35-4.35" strokeLinecap="round" />
+          </Svg>
+          <TextInput
+            style={styles.searchInput}
+            placeholder={isTa ? 'தேடு...' : 'Search'}
+            placeholderTextColor="#9CA3AF"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+          />
         </View>
 
-        {/* Embedded Search Input Bar + Filter Trigger inside Header */}
-        <View style={styles.searchBarRow}>
-          <View style={styles.inputContainer}>
-            <CustomIcon name="search" size={18} color="#1C1614" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder={isTa ? 'பெயர், ஊர், சாதி, தொழில்...' : 'Name, city, caste, job...'}
-              value={filters.searchQuery}
-              onChangeText={txt => setFilters({ ...filters, searchQuery: txt })}
-              placeholderTextColor="rgba(28, 22, 20, 0.55)"
-            />
-            {filters.searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setFilters({ ...filters, searchQuery: '' })}>
-                <CustomIcon name="close" size={16} color="#1C1614" />
-              </TouchableOpacity>
-            )}
-          </View>
+        {/* Purple Filter Button */}
+        <TouchableOpacity
+          style={styles.filterBtn}
+          activeOpacity={0.85}
+          onPress={() => setFilterModalVisible(true)}
+        >
+          <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2.5}>
+            <Path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" strokeLinejoin="round" />
+          </Svg>
+        </TouchableOpacity>
+      </View>
 
+      {/* ─── 3. Map Pins (Nearby Profile Avatars) ────────────────────────── */}
+      {displayedProfiles.map((p, idx) => {
+        const isSelected = selectedProfileIndex === idx;
+        const leftPos = (p.xPercent / 100) * SCREEN_WIDTH - 26;
+        const topPos = (p.yPercent / 100) * SCREEN_HEIGHT - 26;
+
+        return (
           <TouchableOpacity
-            style={[styles.filterBtn, activeFilterCount > 0 && styles.filterBtnActive]}
-            onPress={() => setFilterModalVisible(true)}
-            activeOpacity={0.85}
+            key={p.id}
+            style={[
+              styles.mapPinContainer,
+              { left: leftPos, top: topPos },
+              isSelected && styles.mapPinContainerActive,
+            ]}
+            onPress={() => handleSelectProfileFromMap(idx)}
+            activeOpacity={0.88}
           >
-            <CustomIcon
-              name="filter"
-              size={18}
-              color={activeFilterCount > 0 ? '#FFFFFF' : '#1C1614'}
-            />
-            {activeFilterCount > 0 && (
-              <View style={styles.filterBadge}>
-                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Floating White Metric Card */}
-        <View style={styles.metricCard}>
-          <View style={styles.metricCardHeader}>
-            <Text style={styles.metricCardSubhead}>
-              {isTa ? 'தேடல் முடிவுகள் மற்றும் வடிகட்டிகள்' : 'Search Query & Filter Metrics'}
-            </Text>
-            <View style={styles.activeTag}>
-              <Text style={styles.activeTagText}>{activeFilterCount} Filters</Text>
+            {/* Circular Profile Avatar */}
+            <View style={[styles.avatarRing, isSelected && styles.avatarRingActive]}>
+              <Image source={{ uri: p.avatar }} style={styles.pinAvatar} resizeMode="cover" />
             </View>
-          </View>
+            {/* Distance Label under Avatar */}
+            <Text style={[styles.pinDistanceText, isSelected && styles.pinDistanceTextActive]}>
+              {p.distance}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
 
-          <View style={styles.gaugesRow}>
-            <RingGauge value={filteredProfiles.length} max={100} label={`${filteredProfiles.length}`} unit={isTa ? 'வரன்கள்' : 'RESULTS'} color="#E5A914" />
-            <View style={styles.gaugeDivider} />
-            <RingGauge value={activeFilterCount} max={7} label={`${activeFilterCount}`} unit={isTa ? 'வடிகட்டிகள்' : 'FILTERS'} color="#6A7A14" />
-            <View style={styles.gaugeDivider} />
-            <RingGauge value={100} max={100} label="100%" unit={isTa ? 'சரிபார்த்தவை' : 'VERIFIED'} color="#D17575" />
-          </View>
+      {/* ─── 4. Current User Location Pin (Compass Marker) ───────────────── */}
+      <View
+        style={[
+          styles.userLocationMarker,
+          {
+            left: (74 / 100) * SCREEN_WIDTH - 24,
+            top: (53 / 100) * SCREEN_HEIGHT - 24,
+          },
+        ]}
+      >
+        {/* Pulsing Translucent Halo */}
+        <Animated.View
+          style={[
+            styles.userHalo,
+            {
+              transform: [{ scale: gpsPulseAnim }],
+            },
+          ]}
+        />
+        {/* Solid Center Circle with Directional Arrow */}
+        <View style={styles.userSolidCircle}>
+          <Svg width={18} height={18} viewBox="0 0 24 24" fill="#FFFFFF">
+            <Path d="M12 2L19 21l-7-4-7 4 7-19z" transform="rotate(45 12 12)" />
+          </Svg>
         </View>
       </View>
 
-      {/* ── 2. BODY CONTENT ──────────────────────────────────────────────── */}
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 90 }]} showsVerticalScrollIndicator={false}>
-        {/* Quick Filter Chips */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickChipsContent}>
-          <TouchableOpacity
-            style={[styles.quickChip, !filters.gender && styles.quickChipActive]}
-            onPress={() => setFilters({ ...filters, gender: undefined })}
-          >
-            <Text style={[styles.quickChipText, !filters.gender && styles.quickChipTextActive]}>
-              {isTa ? 'அனைத்தும்' : 'All'}
-            </Text>
-          </TouchableOpacity>
+      {/* ─── 5. GPS Recenter FAB Button ─────────────────────────────────── */}
+      <TouchableOpacity
+        style={[
+          styles.recenterBtn,
+          { bottom: insets.bottom + 175 },
+        ]}
+        onPress={handleRecenter}
+        activeOpacity={0.85}
+      >
+        <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={BRAND_PURPLE} strokeWidth={2.4}>
+          <Circle cx="12" cy="12" r="7" />
+          <Line x1="12" y1="2" x2="12" y2="5" strokeLinecap="round" />
+          <Line x1="12" y1="19" x2="12" y2="22" strokeLinecap="round" />
+          <Line x1="2" y1="12" x2="5" y2="12" strokeLinecap="round" />
+          <Line x1="19" y1="12" x2="22" y2="12" strokeLinecap="round" />
+          <Circle cx="12" cy="12" r="2.5" fill={BRAND_PURPLE} />
+        </Svg>
+      </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.quickChip, filters.gender === 'bride' && styles.quickChipActive]}
-            onPress={() => setFilters({ ...filters, gender: filters.gender === 'bride' ? undefined : 'bride' })}
-          >
-            <Text style={[styles.quickChipText, filters.gender === 'bride' && styles.quickChipTextActive]}>
-              {isTa ? 'மணமகள்' : 'Brides'}
-            </Text>
-          </TouchableOpacity>
+      {/* ─── 6. Bottom Horizontal Preview Carousel Cards ────────────────── */}
+      <View
+        style={[
+          styles.bottomCarouselWrap,
+          { bottom: insets.bottom + 85 },
+        ]}
+      >
+        <FlatList
+          ref={flatListRef}
+          data={displayedProfiles}
+          keyExtractor={item => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={CARD_WIDTH + CARD_SPACING}
+          decelerationRate="fast"
+          contentContainerStyle={styles.carouselContainer}
+          onMomentumScrollEnd={handleScrollEnd}
+          renderItem={({ item, index }) => (
+            <TouchableOpacity
+              style={styles.profileCard}
+              activeOpacity={0.92}
+              onPress={() => onProfilePress(item as any as MatrimonyProfile)}
+            >
+              {/* Profile Avatar */}
+              <Image source={{ uri: item.avatar }} style={styles.cardAvatar} resizeMode="cover" />
 
-          <TouchableOpacity
-            style={[styles.quickChip, filters.gender === 'groom' && styles.quickChipActive]}
-            onPress={() => setFilters({ ...filters, gender: filters.gender === 'groom' ? undefined : 'groom' })}
-          >
-            <Text style={[styles.quickChipText, filters.gender === 'groom' && styles.quickChipTextActive]}>
-              {isTa ? 'மணமகன்' : 'Grooms'}
-            </Text>
-          </TouchableOpacity>
+              {/* Profile Details (Name, Age, Location) */}
+              <View style={styles.cardInfo}>
+                <View style={styles.cardNameRow}>
+                  <Text style={styles.cardNameText}>{item.name}, {item.age}</Text>
+                  {/* Golden Verified Badge */}
+                  <View style={styles.verifiedBadge}>
+                    <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M5 13l4 4L19 7"
+                        stroke="#18181D"
+                        strokeWidth="3.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                  </View>
+                </View>
+                <Text style={styles.cardLocationText}>
+                  {item.currentCity}, {item.currentCountry}
+                </Text>
+              </View>
 
-          <TouchableOpacity
-            style={[styles.quickChip, filters.verifiedOnly && styles.quickChipActive]}
-            onPress={() => setFilters({ ...filters, verifiedOnly: !filters.verifiedOnly })}
-          >
-            <Text style={[styles.quickChipText, filters.verifiedOnly && styles.quickChipTextActive]}>
-              ✓ {isTa ? 'சரிபார்க்கப்பட்டது' : 'Verified'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.quickChip, filters.withPhotoOnly && styles.quickChipActive]}
-            onPress={() => setFilters({ ...filters, withPhotoOnly: !filters.withPhotoOnly })}
-          >
-            <Text style={[styles.quickChipText, filters.withPhotoOnly && styles.quickChipTextActive]}>
-              📷 {isTa ? 'புகைப்படத்துடன்' : 'With Photo'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.quickChip, filters.horoscopePoruthamOnly && styles.quickChipActive]}
-            onPress={() => setFilters({ ...filters, horoscopePoruthamOnly: !filters.horoscopePoruthamOnly })}
-          >
-            <Text style={[styles.quickChipText, filters.horoscopePoruthamOnly && styles.quickChipTextActive]}>
-              ★ {isTa ? '10 பொருத்தம்' : '10-Porutham'}
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
-
-        {/* Section Heading */}
-        <View style={styles.resultsHeaderRow}>
-          <Text style={styles.resultsTitleText}>
-            {filteredProfiles.length} {isTa ? 'பொருத்தமான வரன்கள்' : 'PROFILES FOUND'}
-          </Text>
-          {activeFilterCount > 0 && (
-            <TouchableOpacity onPress={() => setFilters({ ...DEFAULT_FILTERS })}>
-              <Text style={styles.clearFilterText}>{isTa ? 'அழி' : 'Clear Filters'}</Text>
+              {/* Like / Express Interest Circular Button */}
+              <TouchableOpacity
+                style={styles.cardLikeBtn}
+                onPress={() => handleSendInterest(item)}
+                activeOpacity={0.8}
+              >
+                <Svg width={22} height={22} viewBox="0 0 24 24" fill="#FFFFFF">
+                  <Path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                </Svg>
+              </TouchableOpacity>
             </TouchableOpacity>
           )}
-        </View>
+        />
+      </View>
 
-        {/* 2-Column Matches Grid */}
-        <View style={styles.twoColumnGrid}>
-          {filteredProfiles.map(item => {
-            const isShortlisted = shortlists.includes(item.id);
-
-            return (
-              <View key={item.id} style={styles.gridCard}>
-                <TouchableOpacity
-                  activeOpacity={0.9}
-                  onPress={() => onProfilePress(item)}
-                  style={styles.gridPhotoWrap}
-                >
-                  <Image
-                    source={{
-                      uri:
-                        item.photos?.[0] ||
-                        'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
-                    }}
-                    style={styles.gridPhoto}
-                  />
-
-                  <TouchableOpacity
-                    style={styles.gridHeartBtn}
-                    onPress={() => handleToggleShortlist(item.id)}
-                    activeOpacity={0.8}
-                  >
-                    <CustomIcon
-                      name={isShortlisted ? 'heart-filled' : 'heart'}
-                      size={16}
-                      color={isShortlisted ? PALETTE.maroon : '#1C1614'}
-                    />
-                  </TouchableOpacity>
-
-                  <View style={styles.gridBadge}>
-                    <Text style={styles.gridBadgeText}>★ 9/10 Porutham</Text>
-                  </View>
-                </TouchableOpacity>
-
-                <View style={styles.gridDetails}>
-                  <Text style={styles.gridName} numberOfLines={1}>
-                    {item.name.split(',')[0]}, {item.age}
-                  </Text>
-                  <Text style={styles.gridJob} numberOfLines={1}>
-                    {item.educationCareer?.occupation || 'Professional'}
-                  </Text>
-                  <Text style={styles.gridCity} numberOfLines={1}>
-                    {item.currentCity || 'Chennai'} • {item.caste || 'Tamil'}
-                  </Text>
-
-                  <TouchableOpacity
-                    style={styles.gridActionBtn}
-                    onPress={() => handleSendInterest(item.id)}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.gridActionBtnText}>{isTa ? 'விருப்பம் அனுப்பு' : 'Connect'}</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      </ScrollView>
-
-      {/* Filter Modal */}
-      <FilterModal
+      {/* ─── 7. Modern Home Filter Modal ─────────────────────────────────── */}
+      <HomeFilterModal
         visible={filterModalVisible}
+        currentLocation={selectedLocation}
         onClose={() => setFilterModalVisible(false)}
-        filters={filters}
-        onApply={(newF: SearchFilterState) => {
-          setFilters(newF);
-          setFilterModalVisible(false);
+        onApply={(filters: FilterState) => {
+          let updated = [...NEARBY_PROFILES];
+          if (filters.interestedIn === 'Women') {
+            updated = updated.filter(p => p.gender === 'bride');
+          } else if (filters.interestedIn === 'Men') {
+            updated = updated.filter(p => p.gender === 'groom');
+          }
+          updated = updated.filter(
+            p => p.distanceKm >= filters.minDistance && p.distanceKm <= filters.maxDistance
+          );
+          setActiveProfiles(updated);
+          setSelectedProfileIndex(0);
         }}
-        onReset={() => setFilters({ ...DEFAULT_FILTERS })}
-        totalMatchesCount={filteredProfiles.length}
-        language={language}
+        isTa={isTa}
       />
     </View>
   );
 };
 
-/* ─── Stylesheet ───────────────────────────────────────────────────────────── */
 const styles = StyleSheet.create({
-  root: {
+  container: {
     flex: 1,
-    backgroundColor: PALETTE.pageBg,
+    backgroundColor: '#F7F8FA',
   },
-  amberHeaderZone: {
-    backgroundColor: PALETTE.amberHeader,
-    paddingHorizontal: 20,
-    paddingBottom: 22,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    shadowColor: '#8C6700',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
-    elevation: 8,
-  },
-  topBarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  brandLogoCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#1C1614',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brandTextWrap: {
-    flexDirection: 'column',
-  },
-  brandTitleText: {
-    fontSize: 19,
-    fontWeight: '800',
-    color: '#1C1614',
-    letterSpacing: 0.3,
-  },
-  brandSubTitleText: {
-    fontSize: 9.5,
-    fontWeight: '700',
-    color: 'rgba(28, 22, 20, 0.72)',
-    letterSpacing: 1.2,
-  },
-  topBarActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  langSwitchPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.45)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.65)',
-  },
-  langPillText: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#1C1614',
-  },
-  bellBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.65)',
-  },
-  bellBadgeDot: {
+  mapContainer: {
     position: 'absolute',
-    top: 7,
-    right: 7,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: PALETTE.redDot,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
-  avatarWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    overflow: 'hidden',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  searchBarRow: {
+
+  /* Top Bar */
+  topBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 16,
+    paddingHorizontal: 16,
+    gap: 12,
+    zIndex: 20,
   },
-  inputContainer: {
+  searchBar: {
     flex: 1,
-    height: 46,
-    borderRadius: 16,
+    height: 48,
+    borderRadius: 14,
     backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
     gap: 10,
-    shadowColor: '#8C6700',
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
-    color: '#1C1614',
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#18181D',
+    paddingVertical: 0,
   },
   filterBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: BRAND_PURPLE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: BRAND_PURPLE,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+
+  /* Map Pins */
+  mapPinContainer: {
+    position: 'absolute',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  mapPinContainerActive: {
+    transform: [{ scale: 1.1 }],
+    zIndex: 15,
+  },
+  avatarRing: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2.5,
+    borderColor: BRAND_PURPLE,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: BRAND_PURPLE,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  avatarRingActive: {
+    borderWidth: 3.5,
+    borderColor: BRAND_PURPLE,
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  pinAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  pinDistanceText: {
+    marginTop: 3,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#18181D',
+    letterSpacing: 0.2,
+  },
+  pinDistanceTextActive: {
+    color: BRAND_PURPLE,
+    fontWeight: '800',
+  },
+
+  /* Current User GPS Marker */
+  userLocationMarker: {
+    position: 'absolute',
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 8,
+  },
+  userHalo: {
+    position: 'absolute',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(109, 83, 245, 0.22)',
+  },
+  userSolidCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: BRAND_PURPLE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2.5,
+    borderColor: '#FFFFFF',
+    shadowColor: BRAND_PURPLE,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+
+  /* Recenter GPS FAB */
+  recenterBtn: {
+    position: 'absolute',
+    right: 20,
     width: 46,
     height: 46,
-    borderRadius: 16,
+    borderRadius: 23,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-    shadowColor: '#8C6700',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  filterBtnActive: {
-    backgroundColor: '#1C1614',
-  },
-  filterBadge: {
-    position: 'absolute',
-    top: -3,
-    right: -3,
-    backgroundColor: PALETTE.maroon,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  filterBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  metricCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    shadowColor: '#3A271D',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
     elevation: 6,
+    zIndex: 20,
   },
-  metricCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
+
+  /* Bottom Carousel */
+  bottomCarouselWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 25,
   },
-  metricCardSubhead: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: PALETTE.textMuted,
+  carouselContainer: {
+    paddingHorizontal: 16,
+    gap: CARD_SPACING,
   },
-  activeTag: {
-    backgroundColor: PALETTE.oliveSoft,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  activeTagText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: PALETTE.olive,
-  },
-  gaugesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-  },
-  gaugeContainer: {
-    alignItems: 'center',
-  },
-  gaugeValueText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#1C1614',
-  },
-  gaugeUnitText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: PALETTE.textMuted,
-    marginTop: 4,
-    letterSpacing: 0.3,
-  },
-  gaugeDivider: {
-    width: 1,
-    height: 36,
-    backgroundColor: '#F0ECE3',
-  },
-  scrollContent: {
-    paddingHorizontal: 18,
-    paddingTop: 16,
-  },
-  quickChipsContent: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
-  },
-  quickChip: {
-    paddingHorizontal: 13,
-    paddingVertical: 7,
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: PALETTE.cardBorder,
-  },
-  quickChipActive: {
-    backgroundColor: PALETTE.amberHeader,
-    borderColor: PALETTE.amberHeader,
-  },
-  quickChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: PALETTE.textSecondary,
-  },
-  quickChipTextActive: {
-    color: '#1C1614',
-    fontWeight: '800',
-  },
-  resultsHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  resultsTitleText: {
-    fontSize: 12.5,
-    fontWeight: '800',
-    color: PALETTE.textInk,
-    letterSpacing: 0.6,
-  },
-  clearFilterText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: PALETTE.amberHeaderDark,
-  },
-  twoColumnGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  gridCard: {
-    width: GRID_CARD_WIDTH,
+  profileCard: {
+    width: CARD_WIDTH,
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: PALETTE.cardBorder,
-    shadowColor: '#3A271D',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-    marginBottom: 4,
-  },
-  gridPhotoWrap: {
-    width: '100%',
-    height: 140,
-    position: 'relative',
-  },
-  gridPhoto: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#EAE4DA',
-  },
-  gridHeartBtn: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.88)',
+    padding: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 8,
   },
-  gridBadge: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    backgroundColor: 'rgba(28, 22, 20, 0.75)',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 8,
+  cardAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#E5E7EB',
   },
-  gridBadgeText: {
-    fontSize: 9.5,
-    fontWeight: '700',
-    color: PALETTE.amberHeader,
+  cardInfo: {
+    flex: 1,
+    marginLeft: 14,
   },
-  gridDetails: {
-    padding: 10,
-  },
-  gridName: {
-    fontSize: 13.5,
-    fontWeight: '700',
-    color: PALETTE.textInk,
-    marginBottom: 2,
-  },
-  gridJob: {
-    fontSize: 11,
-    color: PALETTE.textMuted,
-  },
-  gridCity: {
-    fontSize: 10.5,
-    color: PALETTE.textMuted,
-    marginBottom: 8,
-  },
-  gridActionBtn: {
-    width: '100%',
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: PALETTE.amberHeader,
+  cardNameRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 6,
   },
-  gridActionBtnText: {
-    fontSize: 11.5,
+  cardNameText: {
+    fontSize: 16,
     fontWeight: '800',
-    color: '#1C1614',
+    color: '#18181D',
+  },
+  verifiedBadge: {
+    width: 17,
+    height: 17,
+    borderRadius: 8.5,
+    backgroundColor: '#FACC15',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardLocationText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+    letterSpacing: 0.9,
+    marginTop: 2,
+  },
+  cardLikeBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: BRAND_PURPLE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: BRAND_PURPLE,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
 });
