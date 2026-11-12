@@ -107,6 +107,7 @@ const SLIDES: SlideData[] = [
 
 export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   language,
+  onToggleLanguage,
   onComplete,
   onSkip,
 }) => {
