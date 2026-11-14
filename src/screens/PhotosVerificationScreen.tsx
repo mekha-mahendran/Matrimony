@@ -141,22 +141,6 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
   const isTa = language === 'ta';
   const quickPhotos = userGender === 'female' ? QUICK_PHOTOS_FEMALE : QUICK_PHOTOS_MALE;
 
-  // Safe check for native ImagePicker module availability
-  const isImagePickerAvailable = (): boolean => {
-    try {
-      if (typeof (globalThis as any).__turboModuleProxy === 'function') {
-        const tm = (TurboModuleRegistry as any)?.get?.('ImagePicker');
-        if (tm) return true;
-      }
-    } catch {}
-
-    return Boolean(
-      (NativeModules as any)?.ImagePicker ||
-      (NativeModules as any)?.ImagePickerManager ||
-      (NativeModules as any)?.RNImagePicker
-    );
-  };
-
   const handleRemovePhoto = (index: number) => {
     const updated = [...photos];
     updated[index] = null;
@@ -202,12 +186,6 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
     const targetSlot = activeSlot;
     if (targetSlot === null) return;
 
-    if (!isImagePickerAvailable()) {
-      // Seamlessly open upload & photo chooser without showing an error dialog
-      setShowUrlModal(true);
-      return;
-    }
-
     try {
       const response = await launchImageLibrary({
         mediaType: 'photo',
@@ -220,7 +198,14 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
 
       if (response.didCancel) return;
       if (response.errorCode) {
-        setShowUrlModal(true);
+        if (response.errorCode === 'permission') {
+          Alert.alert(
+            isTa ? 'கேலரி அனுமதி' : 'Gallery Permission',
+            response.errorMessage || (isTa ? 'கேலரி அனுமதியை இயக்கவும்' : 'Please grant gallery permission')
+          );
+        } else {
+          setShowUrlModal(true);
+        }
         return;
       }
 
@@ -236,7 +221,7 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
         processAndUploadPhoto(targetSlot, undefined, asset.uri);
       }
     } catch (err: any) {
-      console.warn('Gallery launch error, opening URL sheet:', err);
+      console.warn('Gallery launch error:', err);
       setShowUrlModal(true);
     }
   };
@@ -244,12 +229,6 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
   const handleLaunchCamera = async () => {
     const targetSlot = activeSlot;
     if (targetSlot === null) return;
-
-    if (!isImagePickerAvailable()) {
-      // Seamlessly open upload & photo chooser without showing an error dialog
-      setShowUrlModal(true);
-      return;
-    }
 
     try {
       const response = await launchCamera({
@@ -263,7 +242,14 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
 
       if (response.didCancel) return;
       if (response.errorCode) {
-        setShowUrlModal(true);
+        if (response.errorCode === 'camera_unavailable' || response.errorCode === 'permission') {
+          Alert.alert(
+            isTa ? 'கேமரா அனுமதி' : 'Camera Permission',
+            response.errorMessage || (isTa ? 'கேமரா அனுமதியை இயக்கவும்' : 'Please grant camera permission')
+          );
+        } else {
+          setShowUrlModal(true);
+        }
         return;
       }
 
@@ -279,7 +265,7 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
         processAndUploadPhoto(targetSlot, undefined, asset.uri);
       }
     } catch (err: any) {
-      console.warn('Camera launch error, opening URL sheet:', err);
+      console.warn('Camera launch error:', err);
       setShowUrlModal(true);
     }
   };
