@@ -23,19 +23,37 @@ export const scaleFontSize = (size: number): number => {
 };
 
 const scaleStyle = (style: any): any => {
-  if (!style || typeof style !== 'object' || typeof style.fontSize !== 'number') {
+  if (!style || typeof style !== 'object') {
     return style;
   }
-  const next = scaleFontSize(style.fontSize);
-  if (next === style.fontSize) {
-    return style;
+
+  let nextStyle = style;
+  let modified = false;
+
+  // Protect against Android Fabric crash:
+  // "FontSize should be a positive value. Current value: 0"
+  // On Android, TextAttributeProps strictly throws IllegalArgumentException if
+  // letterSpacing is defined but fontSize <= 0 (or undefined / NaN).
+  if (style.letterSpacing != null && (typeof style.fontSize !== 'number' || style.fontSize <= 0 || isNaN(style.fontSize))) {
+    nextStyle = { ...nextStyle, fontSize: 14 };
+    modified = true;
+  } else if (typeof style.fontSize === 'number' && (style.fontSize <= 0 || isNaN(style.fontSize))) {
+    nextStyle = { ...nextStyle, fontSize: 14 };
+    modified = true;
   }
-  const result = { ...style, fontSize: next };
-  if (typeof style.lineHeight === 'number') {
-    // Keep the original line-height ratio.
-    result.lineHeight = Math.round((style.lineHeight * next) / style.fontSize);
+
+  if (typeof nextStyle.fontSize === 'number') {
+    const next = scaleFontSize(nextStyle.fontSize);
+    if (next !== nextStyle.fontSize) {
+      nextStyle = { ...nextStyle, fontSize: Math.max(next, 1) };
+      if (typeof style.lineHeight === 'number' && style.fontSize > 0) {
+        nextStyle.lineHeight = Math.round((style.lineHeight * next) / style.fontSize);
+      }
+      modified = true;
+    }
   }
-  return result;
+
+  return modified ? nextStyle : style;
 };
 
 let patched = false;
