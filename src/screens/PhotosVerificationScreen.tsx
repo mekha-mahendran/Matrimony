@@ -5,6 +5,7 @@ import {
   Dimensions,
   Image,
   Modal,
+  NativeModules,
   Platform,
   ScrollView,
   StatusBar,
@@ -15,23 +16,61 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 import {
   launchCamera,
   launchImageLibrary,
-  ImagePickerResponse,
 } from 'react-native-image-picker';
 import { Language } from '../localization';
 import { LanguageToggle } from '../components/LanguageToggle';
-import {
-  uploadImageToS3,
-  isS3Url,
-  S3_BUCKET_NAME,
-  S3_REGION,
-} from '../services/s3UploadService';
+import { uploadImageToS3 } from '../services/s3UploadService';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const BRAND_PURPLE = '#6D53F5';
+
+// --- Vector SVG Icons ---
+
+const CameraVectorIcon = ({ color = BRAND_PURPLE, size = 22 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+    <Circle cx="12" cy="13" r="4" />
+  </Svg>
+);
+
+const GalleryVectorIcon = ({ color = BRAND_PURPLE, size = 22 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+    <Circle cx="8.5" cy="8.5" r="1.5" />
+    <Path d="M21 15l-5-5L5 21" />
+  </Svg>
+);
+
+const LinkVectorIcon = ({ color = BRAND_PURPLE, size = 22 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <Path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </Svg>
+);
+
+const CloseVectorIcon = ({ color = '#6B7280', size = 18 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+    <Line x1="18" y1="6" x2="6" y2="18" />
+    <Line x1="6" y1="6" x2="18" y2="18" />
+  </Svg>
+);
+
+const PlusVectorIcon = ({ color = BRAND_PURPLE, size = 18 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+    <Line x1="12" y1="5" x2="12" y2="19" />
+    <Line x1="5" y1="12" x2="19" y2="12" />
+  </Svg>
+);
+
+const CheckVectorIcon = ({ color = '#15803D', size = 13 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.8} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M20 6L9 17l-5-5" />
+  </Svg>
+);
 
 export interface PhotosVerificationData {
   photos: string[];
@@ -57,10 +96,9 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
   onFinish,
   onBackPress,
 }) => {
+  // --- All Hooks in strictly constant order ---
   const insets = useSafeAreaInsets();
-  const isTa = language === 'ta';
 
-  // 6 Photo slots: initialize purely from user data (no mock/sample portrait fallback)
   const [photos, setPhotos] = useState<(string | null)[]>([
     initialPhotos[0] || null,
     initialPhotos[1] || null,
@@ -70,19 +108,11 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
     initialPhotos[5] || null,
   ]);
 
-  // Verification states
   const [mobileVerified, setMobileVerified] = useState(true);
   const [emailVerified, setEmailVerified] = useState(false);
   const [idVerified, setIdVerified] = useState(false);
-
-  // Active slot index for modal picker
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
-
-  // Uploading state
   const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
-  const [uploadStatusText, setUploadStatusText] = useState<string>('');
-
-  // Manual URL modal state
   const [showUrlModal, setShowUrlModal] = useState<boolean>(false);
   const [customUrlInput, setCustomUrlInput] = useState<string>('');
 
@@ -91,6 +121,16 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
       (StatusBar as any).setBackgroundColor?.('#FFFFFF', true);
     }
   }, []);
+
+  const isTa = language === 'ta';
+
+  // Safe check if native image picker module is compiled into the running APK
+  const isImagePickerAvailable = (): boolean => {
+    return Boolean(
+      (NativeModules as any)?.ImagePickerManager ||
+      (NativeModules as any)?.RNImagePicker
+    );
+  };
 
   const handleRemovePhoto = (index: number) => {
     const updated = [...photos];
@@ -106,17 +146,12 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
   ) => {
     try {
       setUploadingSlot(slotIndex);
-      setUploadStatusText(
-        isTa ? 'AWS S3 பக்கெட்டில் பதிவேற்றப்படுகிறது...' : 'Uploading to AWS S3 bucket...'
-      );
 
       let finalUrl = '';
-
       if (base64Data) {
         const uploadResult = await uploadImageToS3(base64Data, mimeType);
         finalUrl = uploadResult.url;
       } else if (uri) {
-        // Direct URI fallback
         finalUrl = uri;
       }
 
@@ -126,116 +161,129 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
         setPhotos(updated);
 
         Alert.alert(
-          isTa ? 'வெற்றிகரமாக பதிவேற்றப்பட்டது' : 'Upload Complete',
+          isTa ? 'புகைப்படம் சேர்க்கப்பட்டது' : 'Photo Uploaded',
           isTa
-            ? `புகைப்படம் AWS S3 பக்கெட்டில் (${S3_BUCKET_NAME}) வெற்றிகரமாக பதிவேற்றப்பட்டது.`
-            : `Photo uploaded successfully to AWS S3 bucket: ${S3_BUCKET_NAME}`
+            ? 'உங்கள் சுயவிவரப் புகைப்படம் வெற்றிகரமாகச் சேர்க்கப்பட்டது.'
+            : 'Your profile photo has been added successfully.'
         );
       }
     } catch (err: any) {
-      console.error('[PhotosVerificationScreen] S3 Upload Error:', err);
+      console.error('[PhotosVerificationScreen] Upload Error:', err);
       Alert.alert(
         isTa ? 'பதிவேற்ற பிழை' : 'Upload Failed',
-        err?.message || (isTa ? 'பதிவேற்ற முடியவில்லை.' : 'Failed to upload photo to S3.')
+        err?.message || (isTa ? 'பதிவேற்ற முடியவில்லை.' : 'Failed to upload photo.')
       );
     } finally {
       setUploadingSlot(null);
-      setUploadStatusText('');
       setActiveSlot(null);
     }
   };
 
-  const handleLaunchGallery = () => {
+  const handleLaunchGallery = async () => {
     const targetSlot = activeSlot;
     if (targetSlot === null) return;
 
-    try {
-      launchImageLibrary(
-        {
-          mediaType: 'photo',
-          selectionLimit: 1,
-          includeBase64: true,
-          quality: 0.8,
-          maxWidth: 1280,
-          maxHeight: 1280,
-        },
-        (response: ImagePickerResponse) => {
-          if (response.didCancel) return;
-          if (response.errorCode) {
-            Alert.alert(
-              isTa ? 'கேலரி பிழை' : 'Gallery Error',
-              response.errorMessage || (isTa ? 'படத்தை அணுக முடியவில்லை' : 'Could not access image')
-            );
-            return;
-          }
-          const asset = response.assets?.[0];
-          if (asset?.base64) {
-            processAndUploadPhoto(
-              targetSlot,
-              asset.base64,
-              asset.uri,
-              asset.type || 'image/jpeg'
-            );
-          } else if (asset?.uri) {
-            processAndUploadPhoto(targetSlot, undefined, asset.uri);
-          }
-        }
+    if (!isImagePickerAvailable()) {
+      Alert.alert(
+        isTa ? 'கேலரி அணுகல்' : 'Photo Gallery',
+        isTa
+          ? 'நேரடி பட URL இணைப்பைப் பயன்படுத்தவும் அல்லது பயன்பாட்டை மீண்டும் உருவாக்கவும்.'
+          : 'Please enter a direct image URL or rebuild the app to activate native gallery.',
+        [
+          { text: isTa ? 'URL உள்ளிடவும்' : 'Enter URL', onPress: () => setShowUrlModal(true) },
+          { text: isTa ? 'ரத்து' : 'Cancel', style: 'cancel' },
+        ]
       );
+      return;
+    }
+
+    try {
+      const response = await launchImageLibrary({
+        mediaType: 'photo',
+        selectionLimit: 1,
+        includeBase64: true,
+        quality: 0.8,
+        maxWidth: 1280,
+        maxHeight: 1280,
+      });
+
+      if (response.didCancel) return;
+      if (response.errorCode) {
+        Alert.alert(
+          isTa ? 'கேலரி பிழை' : 'Gallery Error',
+          response.errorMessage || (isTa ? 'படத்தை அணுக முடியவில்லை' : 'Could not access image')
+        );
+        return;
+      }
+
+      const asset = response.assets?.[0];
+      if (asset?.base64) {
+        processAndUploadPhoto(
+          targetSlot,
+          asset.base64,
+          asset.uri,
+          asset.type || 'image/jpeg'
+        );
+      } else if (asset?.uri) {
+        processAndUploadPhoto(targetSlot, undefined, asset.uri);
+      }
     } catch (err: any) {
       console.warn('Image picker error:', err);
-      Alert.alert(
-        isTa ? 'அணுகல் பிழை' : 'Image Picker Notice',
-        isTa
-          ? 'நேரடி பட URL உள்ளீடு விருப்பத்தைப் பயன்படுத்தவும்.'
-          : 'Please use the direct image URL option.'
-      );
+      setShowUrlModal(true);
     }
   };
 
-  const handleLaunchCamera = () => {
+  const handleLaunchCamera = async () => {
     const targetSlot = activeSlot;
     if (targetSlot === null) return;
 
-    try {
-      launchCamera(
-        {
-          mediaType: 'photo',
-          includeBase64: true,
-          quality: 0.8,
-          maxWidth: 1280,
-          maxHeight: 1280,
-          saveToPhotos: true,
-        },
-        (response: ImagePickerResponse) => {
-          if (response.didCancel) return;
-          if (response.errorCode) {
-            Alert.alert(
-              isTa ? 'கேமரா பிழை' : 'Camera Error',
-              response.errorMessage || (isTa ? 'கேமராவைத் திறக்க முடியவில்லை' : 'Could not open camera')
-            );
-            return;
-          }
-          const asset = response.assets?.[0];
-          if (asset?.base64) {
-            processAndUploadPhoto(
-              targetSlot,
-              asset.base64,
-              asset.uri,
-              asset.type || 'image/jpeg'
-            );
-          } else if (asset?.uri) {
-            processAndUploadPhoto(targetSlot, undefined, asset.uri);
-          }
-        }
+    if (!isImagePickerAvailable()) {
+      Alert.alert(
+        isTa ? 'கேமரா அணுகல்' : 'Camera Notice',
+        isTa
+          ? 'நேரடி பட URL இணைப்பைப் பயன்படுத்தவும் அல்லது பயன்பாட்டை மீண்டும் உருவாக்கவும்.'
+          : 'Please enter a direct image URL or rebuild the app to activate native camera.',
+        [
+          { text: isTa ? 'URL உள்ளிடவும்' : 'Enter URL', onPress: () => setShowUrlModal(true) },
+          { text: isTa ? 'ரத்து' : 'Cancel', style: 'cancel' },
+        ]
       );
+      return;
+    }
+
+    try {
+      const response = await launchCamera({
+        mediaType: 'photo',
+        includeBase64: true,
+        quality: 0.8,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        saveToPhotos: true,
+      });
+
+      if (response.didCancel) return;
+      if (response.errorCode) {
+        Alert.alert(
+          isTa ? 'கேமரா பிழை' : 'Camera Error',
+          response.errorMessage || (isTa ? 'கேமராவைத் திறக்க முடியவில்லை' : 'Could not open camera')
+        );
+        return;
+      }
+
+      const asset = response.assets?.[0];
+      if (asset?.base64) {
+        processAndUploadPhoto(
+          targetSlot,
+          asset.base64,
+          asset.uri,
+          asset.type || 'image/jpeg'
+        );
+      } else if (asset?.uri) {
+        processAndUploadPhoto(targetSlot, undefined, asset.uri);
+      }
     } catch (err: any) {
       console.warn('Camera error:', err);
-      Alert.alert(
-        isTa ? 'கேமரா பிழை' : 'Camera Notice',
-        isTa
-          ? 'கேமரா அணுகலை அனுமதிக்கவும் அல்லது URL இணைப்பைப் பயன்படுத்தவும்.'
-          : 'Please allow camera access or use the direct image link option.'
-      );
+      setShowUrlModal(true);
     }
   };
 
@@ -309,34 +357,34 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
         <View key={index} style={[styles.photoCardFilled, style, styles.uploadingSlotCard]}>
           <ActivityIndicator size="small" color={BRAND_PURPLE} />
           <Text style={styles.uploadingSlotText}>
-            {isTa ? 'S3 இல்...' : 'S3 Upload...'}
+            {isTa ? 'பதிவேற்றுகிறது...' : 'Uploading...'}
           </Text>
         </View>
       );
     }
 
     if (photoUrl) {
-      const isCloudS3 = isS3Url(photoUrl);
-
       return (
         <View key={index} style={[styles.photoCardFilled, style]}>
           <Image source={{ uri: photoUrl }} style={styles.photoImg} resizeMode="cover" />
 
-          {/* S3 Storage Cloud Badge */}
-          <View style={styles.s3Badge}>
-            <Text style={styles.s3BadgeText}>
-              {isCloudS3 ? '☁️ S3 Bucket' : '✓ Photo'}
-            </Text>
-          </View>
+          {/* Main Photo Badge (Only on first slot) */}
+          {isMain && (
+            <View style={styles.mainBadge}>
+              <Text style={styles.mainBadgeText}>
+                {isTa ? 'முதன்மை' : 'Main'}
+              </Text>
+            </View>
+          )}
 
-          {/* Remove Button */}
+          {/* Remove Button with Vector Icon */}
           <TouchableOpacity
             style={styles.removeBtn}
             onPress={() => handleRemovePhoto(index)}
             activeOpacity={0.8}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={styles.removeBtnText}>✕</Text>
+            <CloseVectorIcon color="#FFFFFF" size={12} />
           </TouchableOpacity>
         </View>
       );
@@ -350,10 +398,10 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
         activeOpacity={0.7}
       >
         <View style={styles.plusIconWrap}>
-          <Text style={styles.plusIcon}>+</Text>
+          <PlusVectorIcon color={BRAND_PURPLE} size={18} />
         </View>
         <Text style={styles.slotUploadLabel}>
-          {isMain ? (isTa ? 'முதன்மை புகைப்படம்' : 'Main Photo') : (isTa ? 'பதிவேற்று' : 'Upload')}
+          {isMain ? (isTa ? 'முதன்மை படம்' : 'Main Photo') : (isTa ? 'பதிவேற்று' : 'Upload')}
         </Text>
       </TouchableOpacity>
     );
@@ -363,7 +411,7 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Top Header with Back button, Progress (8/8) & Language Toggle */}
+      {/* Top Header with Back button, Progress & Language Toggle */}
       <View style={[styles.topBar, { paddingTop: Math.max(insets.top + 8, 16) }]}>
         <TouchableOpacity
           style={styles.backButton}
@@ -398,29 +446,16 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header Title & Subtitle */}
+        {/* Header Title & Subtitle (Clean user-friendly text, no technical backend text) */}
         <View style={styles.headerArea}>
           <Text style={styles.title}>
             {isTa ? 'புகைப்படங்கள் & சரிபார்ப்பு' : 'Photos & verification'}
           </Text>
           <Text style={styles.subtitle}>
             {isTa
-              ? 'உங்கள் சொந்த புகைப்படங்களை நேரடியாக AWS S3 பக்கெட்டில் பதிவேற்றவும்.'
-              : 'Upload your real photos directly to secure AWS S3 cloud storage.'}
+              ? 'புகைப்படங்கள் உள்ள சுயவிவரங்கள் அதிக வரன்களை ஈர்க்கின்றன.'
+              : 'Profiles with photos get far more interest.'}
           </Text>
-
-          {/* S3 Storage Status Banner */}
-          <View style={styles.s3StatusBanner}>
-            <Text style={styles.s3BannerIcon}>☁️</Text>
-            <View style={styles.s3BannerTexts}>
-              <Text style={styles.s3BannerTitle}>
-                AWS S3 Cloud Storage Active
-              </Text>
-              <Text style={styles.s3BannerSub}>
-                Bucket: {S3_BUCKET_NAME} • {S3_REGION}
-              </Text>
-            </View>
-          </View>
         </View>
 
         {/* Photo Grid */}
@@ -449,7 +484,7 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
         <Text style={styles.captionText}>
           {isTa
             ? 'முதல் புகைப்படம் உங்கள் முக்கிய சுயவிவரப் படமாகும்.'
-            : 'The first photo will be displayed as your main profile picture.'}
+            : 'The first photo is your main profile picture.'}
         </Text>
 
         {/* Verification Items Stack */}
@@ -469,9 +504,18 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
               onPress={() => handleVerify('mobile')}
               activeOpacity={0.8}
             >
-              <Text style={[styles.verifyBtnText, mobileVerified && styles.verifiedBtnText]}>
-                {mobileVerified ? (isTa ? 'சரிபார்க்கப்பட்டது ✓' : 'Verified ✓') : (isTa ? 'சரிபார்' : 'Verify')}
-              </Text>
+              {mobileVerified ? (
+                <View style={styles.verifiedBtnContent}>
+                  <Text style={styles.verifiedBtnText}>
+                    {isTa ? 'சரிபார்க்கப்பட்டது' : 'Verified'}
+                  </Text>
+                  <CheckVectorIcon color="#15803D" size={13} />
+                </View>
+              ) : (
+                <Text style={styles.verifyBtnText}>
+                  {isTa ? 'சரிபார்' : 'Verify'}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -490,9 +534,18 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
               onPress={() => handleVerify('email')}
               activeOpacity={0.8}
             >
-              <Text style={[styles.verifyBtnText, emailVerified && styles.verifiedBtnText]}>
-                {emailVerified ? (isTa ? 'சரிபார்க்கப்பட்டது ✓' : 'Verified ✓') : (isTa ? 'சரிபார்' : 'Verify')}
-              </Text>
+              {emailVerified ? (
+                <View style={styles.verifiedBtnContent}>
+                  <Text style={styles.verifiedBtnText}>
+                    {isTa ? 'சரிபார்க்கப்பட்டது' : 'Verified'}
+                  </Text>
+                  <CheckVectorIcon color="#15803D" size={13} />
+                </View>
+              ) : (
+                <Text style={styles.verifyBtnText}>
+                  {isTa ? 'சரிபார்' : 'Verify'}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -511,9 +564,18 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
               onPress={() => handleVerify('id')}
               activeOpacity={0.8}
             >
-              <Text style={[styles.verifyBtnText, idVerified && styles.verifiedBtnText]}>
-                {idVerified ? (isTa ? 'சமர்ப்பிக்கப்பட்டது ✓' : 'Uploaded ✓') : (isTa ? 'சரிபார்' : 'Verify')}
-              </Text>
+              {idVerified ? (
+                <View style={styles.verifiedBtnContent}>
+                  <Text style={styles.verifiedBtnText}>
+                    {isTa ? 'சமர்ப்பிக்கப்பட்டது' : 'Uploaded'}
+                  </Text>
+                  <CheckVectorIcon color="#15803D" size={13} />
+                </View>
+              ) : (
+                <Text style={styles.verifyBtnText}>
+                  {isTa ? 'சரிபார்' : 'Verify'}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -537,7 +599,7 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
         </TouchableOpacity>
       </View>
 
-      {/* Upload Option Selection Action Sheet Modal */}
+      {/* Profile Photo Upload Action Sheet Modal */}
       <Modal
         visible={activeSlot !== null && !showUrlModal}
         transparent
@@ -560,15 +622,18 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
               <Text style={styles.modalTitle}>
                 {isTa ? 'சுயவிவரப் புகைப்படத்தைப் பதிவேற்றவும்' : 'Upload Profile Photo'}
               </Text>
-              <TouchableOpacity onPress={() => setActiveSlot(null)}>
-                <Text style={styles.modalCloseText}>✕</Text>
+              <TouchableOpacity
+                onPress={() => setActiveSlot(null)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <CloseVectorIcon color="#9CA3AF" size={18} />
               </TouchableOpacity>
             </View>
 
             <Text style={styles.modalSubtitle}>
               {isTa
-                ? 'உங்கள் சாதனத்திலிருந்து புகைப்படத்தைத் தேர்வுசெய்து AWS S3 பக்கெட்டில் நேரடியாகப் பதிவேற்றவும்.'
-                : 'Select an image from your device to upload directly into AWS S3.'}
+                ? 'உங்கள் புகைப்படத்தைச் சேர்க்க ஒரு வழியைத் தேர்ந்தெடுக்கவும்:'
+                : "Choose how you'd like to add your profile photo:"}
             </Text>
 
             {/* Option 1: Take Photo with Camera */}
@@ -578,7 +643,7 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
               activeOpacity={0.7}
             >
               <View style={styles.uploadOptionIconCircle}>
-                <Text style={styles.uploadOptionIconEmoji}>📷</Text>
+                <CameraVectorIcon color={BRAND_PURPLE} size={22} />
               </View>
               <View style={styles.uploadOptionTexts}>
                 <Text style={styles.uploadOptionTitle}>
@@ -590,14 +655,14 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
               </View>
             </TouchableOpacity>
 
-            {/* Option 2: Gallery / Photo Library */}
+            {/* Option 2: Choose from Gallery */}
             <TouchableOpacity
               style={styles.uploadOptionCard}
               onPress={handleLaunchGallery}
               activeOpacity={0.7}
             >
               <View style={styles.uploadOptionIconCircle}>
-                <Text style={styles.uploadOptionIconEmoji}>🖼️</Text>
+                <GalleryVectorIcon color={BRAND_PURPLE} size={22} />
               </View>
               <View style={styles.uploadOptionTexts}>
                 <Text style={styles.uploadOptionTitle}>
@@ -616,27 +681,17 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
               activeOpacity={0.7}
             >
               <View style={styles.uploadOptionIconCircle}>
-                <Text style={styles.uploadOptionIconEmoji}>🔗</Text>
+                <LinkVectorIcon color={BRAND_PURPLE} size={22} />
               </View>
               <View style={styles.uploadOptionTexts}>
                 <Text style={styles.uploadOptionTitle}>
                   {isTa ? 'படத்தின் இணைய இணைப்பை உள்ளிடவும்' : 'Enter Direct Image URL'}
                 </Text>
                 <Text style={styles.uploadOptionDesc}>
-                  {isTa ? 'கிளவுட் அல்லது வெப் பட இணைப்பை உள்ளிடவும்' : 'Paste any direct image URL or cloud storage link'}
+                  {isTa ? 'கிளவுட் அல்லது வெப் பட இணைப்பை ஒட்டவும்' : 'Paste any direct image URL or cloud storage link'}
                 </Text>
               </View>
             </TouchableOpacity>
-
-            {/* S3 Storage Details Note */}
-            <View style={styles.modalS3Info}>
-              <Text style={styles.modalS3InfoTitle}>
-                ☁️ AWS S3 Destination:
-              </Text>
-              <Text style={styles.modalS3InfoText}>
-                {S3_BUCKET_NAME} ({S3_REGION})
-              </Text>
-            </View>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -657,9 +712,15 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
             style={[styles.urlModalBox, { paddingBottom: 20 }]}
             onStartShouldSetResponder={() => true}
           >
-            <Text style={styles.urlModalTitle}>
-              {isTa ? 'படத்தின் இணைய இணைப்பை உள்ளிடவும்' : 'Enter Image URL'}
-            </Text>
+            <View style={styles.urlModalHeader}>
+              <View style={styles.urlIconCircle}>
+                <LinkVectorIcon color={BRAND_PURPLE} size={18} />
+              </View>
+              <Text style={styles.urlModalTitle}>
+                {isTa ? 'படத்தின் இணைய இணைப்பை உள்ளிடவும்' : 'Enter Image URL'}
+              </Text>
+            </View>
+
             <Text style={styles.urlModalSubtitle}>
               {isTa ? 'படத்திற்கான முழுமையான HTTP / HTTPS இணைப்பை ஒட்டவும்:' : 'Paste a complete image link (HTTPS):'}
             </Text>
@@ -679,6 +740,7 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
               <TouchableOpacity
                 style={styles.urlCancelBtn}
                 onPress={() => setShowUrlModal(false)}
+                activeOpacity={0.7}
               >
                 <Text style={styles.urlCancelText}>
                   {isTa ? 'ரத்து செய்' : 'Cancel'}
@@ -687,6 +749,7 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
               <TouchableOpacity
                 style={styles.urlSubmitBtn}
                 onPress={handleSaveCustomUrl}
+                activeOpacity={0.8}
               >
                 <Text style={styles.urlSubmitText}>
                   {isTa ? 'சேமி' : 'Save Photo'}
@@ -759,7 +822,7 @@ const styles = StyleSheet.create({
   /* Header Area */
   headerArea: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   title: {
     fontSize: 24,
@@ -774,37 +837,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: '#6B7280',
     textAlign: 'center',
-  },
-
-  /* S3 Status Banner */
-  s3StatusBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F3FF',
-    borderWidth: 1,
-    borderColor: '#DDD6FE',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginTop: 12,
-    width: '100%',
-  },
-  s3BannerIcon: {
-    fontSize: 18,
-    marginRight: 10,
-  },
-  s3BannerTexts: {
-    flex: 1,
-  },
-  s3BannerTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#5B21B6',
-  },
-  s3BannerSub: {
-    fontSize: 11,
-    color: '#7C3AED',
-    marginTop: 1,
   },
 
   /* Photo Grid */
@@ -862,12 +894,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 4,
   },
-  plusIcon: {
-    fontSize: 20,
-    color: BRAND_PURPLE,
-    fontWeight: '600',
-    lineHeight: 22,
-  },
   slotUploadLabel: {
     fontSize: 11,
     fontWeight: '600',
@@ -889,7 +915,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   uploadingSlotText: {
-    fontSize: 10,
+    fontSize: 11,
     color: BRAND_PURPLE,
     fontWeight: '600',
   },
@@ -897,20 +923,20 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  s3Badge: {
+  mainBadge: {
     position: 'absolute',
-    bottom: 6,
-    left: 6,
+    bottom: 8,
+    left: 8,
     backgroundColor: 'rgba(17, 24, 39, 0.75)',
-    paddingHorizontal: 7,
+    paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 6,
   },
-  s3BadgeText: {
+  mainBadgeText: {
     color: '#FFFFFF',
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
   },
   removeBtn: {
     position: 'absolute',
@@ -923,18 +949,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  removeBtnText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
 
   /* Caption */
   captionText: {
     fontSize: 12,
     color: '#6B7280',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
 
   /* Verification Cards */
@@ -984,8 +1005,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#86EFAC',
   },
+  verifiedBtnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   verifiedBtnText: {
     color: '#15803D',
+    fontSize: 12,
+    fontWeight: '700',
   },
 
   /* Sticky Bottom Bar */
@@ -1051,12 +1079,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
   },
-  modalCloseText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#9CA3AF',
-    paddingHorizontal: 6,
-  },
   modalSubtitle: {
     fontSize: 13,
     color: '#6B7280',
@@ -1079,13 +1101,12 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#EEF2F6',
+    backgroundColor: '#F5F3FF',
+    borderWidth: 1,
+    borderColor: '#EDE9FE',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
-  },
-  uploadOptionIconEmoji: {
-    fontSize: 22,
   },
   uploadOptionTexts: {
     flex: 1,
@@ -1099,24 +1120,6 @@ const styles = StyleSheet.create({
   uploadOptionDesc: {
     fontSize: 12,
     color: '#6B7280',
-  },
-  modalS3Info: {
-    backgroundColor: '#F5F3FF',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginTop: 6,
-    alignItems: 'center',
-  },
-  modalS3InfoTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#5B21B6',
-  },
-  modalS3InfoText: {
-    fontSize: 11,
-    color: '#7C3AED',
-    marginTop: 2,
   },
 
   /* Direct URL Modal */
@@ -1133,11 +1136,24 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
   },
+  urlModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 6,
+  },
+  urlIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F5F3FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   urlModalTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     color: '#111827',
-    marginBottom: 6,
   },
   urlModalSubtitle: {
     fontSize: 13,

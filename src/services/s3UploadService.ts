@@ -59,3 +59,4 @@ export function isS3Url(url: string | null | undefined): boolean {
   if (!url) return false;
   return url.includes('s3.') || url.includes('.amazonaws.com') || url.includes(S3_BUCKET_NAME);
 }
+
