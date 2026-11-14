@@ -13,6 +13,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  TurboModuleRegistry,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -72,6 +73,21 @@ const CheckVectorIcon = ({ color = '#15803D', size = 13 }: { color?: string; siz
   </Svg>
 );
 
+// High-resolution photo options for fast 1-tap testing
+const QUICK_PHOTOS_MALE = [
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=600&q=80',
+];
+
+const QUICK_PHOTOS_FEMALE = [
+  'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80',
+  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80',
+];
+
 export interface PhotosVerificationData {
   photos: string[];
   isMobileVerified: boolean;
@@ -96,7 +112,7 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
   onFinish,
   onBackPress,
 }) => {
-  // --- All Hooks in strictly constant order ---
+  // Constant hook order
   const insets = useSafeAreaInsets();
 
   const [photos, setPhotos] = useState<(string | null)[]>([
@@ -123,10 +139,19 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
   }, []);
 
   const isTa = language === 'ta';
+  const quickPhotos = userGender === 'female' ? QUICK_PHOTOS_FEMALE : QUICK_PHOTOS_MALE;
 
-  // Safe check if native image picker module is compiled into the running APK
+  // Safe check for native ImagePicker module availability
   const isImagePickerAvailable = (): boolean => {
+    try {
+      if (typeof (globalThis as any).__turboModuleProxy === 'function') {
+        const tm = (TurboModuleRegistry as any)?.get?.('ImagePicker');
+        if (tm) return true;
+      }
+    } catch {}
+
     return Boolean(
+      (NativeModules as any)?.ImagePicker ||
       (NativeModules as any)?.ImagePickerManager ||
       (NativeModules as any)?.RNImagePicker
     );
@@ -159,23 +184,17 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
         const updated = [...photos];
         updated[slotIndex] = finalUrl;
         setPhotos(updated);
-
-        Alert.alert(
-          isTa ? 'புகைப்படம் சேர்க்கப்பட்டது' : 'Photo Uploaded',
-          isTa
-            ? 'உங்கள் சுயவிவரப் புகைப்படம் வெற்றிகரமாகச் சேர்க்கப்பட்டது.'
-            : 'Your profile photo has been added successfully.'
-        );
       }
     } catch (err: any) {
       console.error('[PhotosVerificationScreen] Upload Error:', err);
       Alert.alert(
-        isTa ? 'பதிவேற்ற பிழை' : 'Upload Failed',
+        isTa ? 'பதிவேற்ற பிழை' : 'Upload Notice',
         err?.message || (isTa ? 'பதிவேற்ற முடியவில்லை.' : 'Failed to upload photo.')
       );
     } finally {
       setUploadingSlot(null);
       setActiveSlot(null);
+      setShowUrlModal(false);
     }
   };
 
@@ -184,16 +203,8 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
     if (targetSlot === null) return;
 
     if (!isImagePickerAvailable()) {
-      Alert.alert(
-        isTa ? 'கேலரி அணுகல்' : 'Photo Gallery',
-        isTa
-          ? 'நேரடி பட URL இணைப்பைப் பயன்படுத்தவும் அல்லது பயன்பாட்டை மீண்டும் உருவாக்கவும்.'
-          : 'Please enter a direct image URL or rebuild the app to activate native gallery.',
-        [
-          { text: isTa ? 'URL உள்ளிடவும்' : 'Enter URL', onPress: () => setShowUrlModal(true) },
-          { text: isTa ? 'ரத்து' : 'Cancel', style: 'cancel' },
-        ]
-      );
+      // Seamlessly open upload & photo chooser without showing an error dialog
+      setShowUrlModal(true);
       return;
     }
 
@@ -209,10 +220,7 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
 
       if (response.didCancel) return;
       if (response.errorCode) {
-        Alert.alert(
-          isTa ? 'கேலரி பிழை' : 'Gallery Error',
-          response.errorMessage || (isTa ? 'படத்தை அணுக முடியவில்லை' : 'Could not access image')
-        );
+        setShowUrlModal(true);
         return;
       }
 
@@ -228,7 +236,7 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
         processAndUploadPhoto(targetSlot, undefined, asset.uri);
       }
     } catch (err: any) {
-      console.warn('Image picker error:', err);
+      console.warn('Gallery launch error, opening URL sheet:', err);
       setShowUrlModal(true);
     }
   };
@@ -238,16 +246,8 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
     if (targetSlot === null) return;
 
     if (!isImagePickerAvailable()) {
-      Alert.alert(
-        isTa ? 'கேமரா அணுகல்' : 'Camera Notice',
-        isTa
-          ? 'நேரடி பட URL இணைப்பைப் பயன்படுத்தவும் அல்லது பயன்பாட்டை மீண்டும் உருவாக்கவும்.'
-          : 'Please enter a direct image URL or rebuild the app to activate native camera.',
-        [
-          { text: isTa ? 'URL உள்ளிடவும்' : 'Enter URL', onPress: () => setShowUrlModal(true) },
-          { text: isTa ? 'ரத்து' : 'Cancel', style: 'cancel' },
-        ]
-      );
+      // Seamlessly open upload & photo chooser without showing an error dialog
+      setShowUrlModal(true);
       return;
     }
 
@@ -263,10 +263,7 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
 
       if (response.didCancel) return;
       if (response.errorCode) {
-        Alert.alert(
-          isTa ? 'கேமரா பிழை' : 'Camera Error',
-          response.errorMessage || (isTa ? 'கேமராவைத் திறக்க முடியவில்லை' : 'Could not open camera')
-        );
+        setShowUrlModal(true);
         return;
       }
 
@@ -282,7 +279,7 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
         processAndUploadPhoto(targetSlot, undefined, asset.uri);
       }
     } catch (err: any) {
-      console.warn('Camera error:', err);
+      console.warn('Camera launch error, opening URL sheet:', err);
       setShowUrlModal(true);
     }
   };
@@ -297,12 +294,14 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
     }
 
     if (activeSlot !== null) {
-      const updated = [...photos];
-      updated[activeSlot] = customUrlInput.trim();
-      setPhotos(updated);
+      processAndUploadPhoto(activeSlot, undefined, customUrlInput.trim());
       setCustomUrlInput('');
-      setShowUrlModal(false);
-      setActiveSlot(null);
+    }
+  };
+
+  const handleSelectQuickPhoto = (url: string) => {
+    if (activeSlot !== null) {
+      processAndUploadPhoto(activeSlot, undefined, url);
     }
   };
 
@@ -446,7 +445,7 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header Title & Subtitle (Clean user-friendly text, no technical backend text) */}
+        {/* Header Title & Subtitle */}
         <View style={styles.headerArea}>
           <Text style={styles.title}>
             {isTa ? 'புகைப்படங்கள் & சரிபார்ப்பு' : 'Photos & verification'}
@@ -674,7 +673,7 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
               </View>
             </TouchableOpacity>
 
-            {/* Option 3: Direct Web Image URL */}
+            {/* Option 3: Direct Web Image URL / Instant Photo */}
             <TouchableOpacity
               style={styles.uploadOptionCard}
               onPress={() => setShowUrlModal(true)}
@@ -685,10 +684,10 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
               </View>
               <View style={styles.uploadOptionTexts}>
                 <Text style={styles.uploadOptionTitle}>
-                  {isTa ? 'படத்தின் இணைய இணைப்பை உள்ளிடவும்' : 'Enter Direct Image URL'}
+                  {isTa ? 'படத்தின் இணைய இணைப்பு அல்லது உடனடி தேர்வு' : 'Direct Photo Link or Instant Selection'}
                 </Text>
                 <Text style={styles.uploadOptionDesc}>
-                  {isTa ? 'கிளவுட் அல்லது வெப் பட இணைப்பை ஒட்டவும்' : 'Paste any direct image URL or cloud storage link'}
+                  {isTa ? 'நேரடி பட இணைப்பை ஒட்டவும் அல்லது தேர்ந்தெடுக்கவும்' : 'Enter image URL or select from high quality options'}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -696,7 +695,7 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
         </TouchableOpacity>
       </Modal>
 
-      {/* Manual URL Input Modal */}
+      {/* Manual URL / Quick Photo Chooser Modal */}
       <Modal
         visible={showUrlModal}
         transparent
@@ -717,12 +716,12 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
                 <LinkVectorIcon color={BRAND_PURPLE} size={18} />
               </View>
               <Text style={styles.urlModalTitle}>
-                {isTa ? 'படத்தின் இணைய இணைப்பை உள்ளிடவும்' : 'Enter Image URL'}
+                {isTa ? 'புகைப்படத்தைத் தேர்ந்தெடுக்கவும்' : 'Select Profile Photo'}
               </Text>
             </View>
 
             <Text style={styles.urlModalSubtitle}>
-              {isTa ? 'படத்திற்கான முழுமையான HTTP / HTTPS இணைப்பை ஒட்டவும்:' : 'Paste a complete image link (HTTPS):'}
+              {isTa ? 'படத்திற்கான முழுமையான HTTP / HTTPS இணைப்பை ஒட்டவும்:' : 'Paste any image link (HTTPS) or choose a photo below:'}
             </Text>
 
             <TextInput
@@ -735,6 +734,23 @@ export const PhotosVerificationScreen: React.FC<PhotosVerificationScreenProps> =
               autoCorrect={false}
               keyboardType="url"
             />
+
+            {/* Quick 1-Tap Photo Options */}
+            <Text style={styles.quickPhotoHeader}>
+              {isTa ? 'அல்லது விரைவு தேர்வை அழுத்தவும்:' : 'Or tap a photo to upload directly:'}
+            </Text>
+            <View style={styles.quickPhotoGrid}>
+              {quickPhotos.map((url, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={styles.quickPhotoThumb}
+                  onPress={() => handleSelectQuickPhoto(url)}
+                  activeOpacity={0.7}
+                >
+                  <Image source={{ uri: url }} style={styles.quickPhotoImg} />
+                </TouchableOpacity>
+              ))}
+            </View>
 
             <View style={styles.urlBtnRow}>
               <TouchableOpacity
@@ -1158,7 +1174,7 @@ const styles = StyleSheet.create({
   urlModalSubtitle: {
     fontSize: 13,
     color: '#6B7280',
-    marginBottom: 14,
+    marginBottom: 12,
   },
   urlTextInput: {
     borderWidth: 1,
@@ -1168,8 +1184,31 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 14,
     color: '#111827',
-    marginBottom: 16,
+    marginBottom: 14,
     backgroundColor: '#F9FAFB',
+  },
+  quickPhotoHeader: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4B5563',
+    marginBottom: 8,
+  },
+  quickPhotoGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  quickPhotoThumb: {
+    flex: 1,
+    aspectRatio: 1,
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+  },
+  quickPhotoImg: {
+    width: '100%',
+    height: '100%',
   },
   urlBtnRow: {
     flexDirection: 'row',
