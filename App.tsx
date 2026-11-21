@@ -727,6 +727,7 @@ function ManamaalaiApp() {
         return (
           <PhotosVerificationScreen
             language={language}
+            onToggleLanguage={handleToggleLanguage}
             userGender={registeredGender}
             onFinish={async data => {
               const profileGender = registeredGender === 'male' ? 'groom' : 'bride';

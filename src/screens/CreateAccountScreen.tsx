@@ -145,8 +145,8 @@ export const CreateAccountScreen: React.FC<CreateAccountScreenProps> = ({
             </Text>
             <Text style={styles.subtitle}>
               {isTa
-                ? 'உங்கள் தகவலை கீழே உள்ளிடவும் அல்லது சமூக கணக்குடன் பதிவு செய்யவும்.'
-                : 'Fill your information below or register\nwith your social account.'}
+                ? 'கணக்கை உருவாக்க உங்கள் தகவல்களை கீழே உள்ளிடவும்.'
+                : 'Fill your information below to create your account.'}
             </Text>
           </View>
 
@@ -487,47 +487,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.3,
-  },
-
-  /* Divider */
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 28,
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  dividerText: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    marginHorizontal: 12,
-  },
-
-  /* Social Icons */
-  socialRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 18,
-  },
-  socialBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
   },
 
   /* Footer */

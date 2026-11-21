@@ -157,6 +157,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tamilBrand: {
+    fontSize: 18,
     fontWeight: '700',
     letterSpacing: 0.8,
   },
@@ -170,12 +171,13 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(147, 162, 32, 0.4)',
   },
   badgeText: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: '800',
     color: BRAND.limeOliveDark,
     letterSpacing: 0.6,
   },
   englishBrand: {
+    fontSize: 11,
     fontWeight: '700',
     letterSpacing: 2,
     marginTop: 1,
@@ -193,6 +195,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   blessingText: {
+    fontSize: 11,
     fontWeight: '600',
     fontStyle: 'italic',
     letterSpacing: 0.4,

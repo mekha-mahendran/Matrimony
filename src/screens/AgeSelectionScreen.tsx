@@ -321,6 +321,7 @@ const styles = StyleSheet.create({
 
   /* Number Typography */
   numberBase: {
+    fontSize: 26,
     textAlign: 'center',
     letterSpacing: -0.5,
   },

@@ -976,7 +976,7 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   phoneChatTodayText: {
-    fontSize: 7.5,
+    fontSize: 9,
     fontWeight: '700',
     color: '#9CA3AF',
     letterSpacing: 0.8,
@@ -1450,7 +1450,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   phoneCardLocation: {
-    fontSize: 8.5,
+    fontSize: 9,
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.85)',
     letterSpacing: 0.5,

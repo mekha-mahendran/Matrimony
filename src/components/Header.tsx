@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   blessingSubtitle: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '600',
     color: C.textSecondary,
     letterSpacing: 0.6,
