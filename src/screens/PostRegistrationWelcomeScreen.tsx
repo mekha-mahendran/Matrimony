@@ -104,22 +104,24 @@ export const PostRegistrationWelcomeScreen: React.FC<PostRegistrationWelcomeScre
         <View style={styles.statusPill}>
           <View style={styles.statusDot} />
           <Text style={styles.statusPillText}>
-            {isTa ? 'சுயவிவரம் தயாராக உள்ளது' : 'Profile successfully created!'}
+            {isTa
+              ? 'நிர்வாகி ஒப்புதலுக்காக சமர்ப்பிக்கப்பட்டது ⏳'
+              : 'Submitted for Admin Approval ⏳'}
           </Text>
         </View>
 
         {/* Primary Headline Requested by User */}
         <Text style={styles.mainTitle}>
           {isTa
-            ? 'உங்கள் அழகான பயணம் இங்கே தொடங்குகிறது.'
-            : 'Your beautiful journey begins here.'}
+            ? 'உங்கள் சுயவிவரம் சரிபார்ப்பில் உள்ளது.'
+            : 'Profile Registered & Pending Approval'}
         </Text>
 
         {/* Secondary Subtitle */}
         <Text style={styles.mainSubtitle}>
           {isTa
-            ? `வாழ்த்துகள், ${memberName}! உங்கள் சுயவிவரம் வெற்றிகரமாக உருவாக்கப்பட்டது. உங்கள் விருப்பங்களுக்கு ஏற்ற பொருத்தமான வரன்களை கண்டறியுங்கள்.`
-            : `Welcome, ${memberName}! Your profile has been successfully created. Explore verified profiles tailored to your values and traditions.`}
+            ? `வாழ்த்துகள், ${memberName}! உங்கள் சுயவிவரம் வெற்றிகரமாக பதிவு செய்யப்பட்டது. நிர்வாகி உங்கள் சுயவிவரத்தை சரிபார்த்து ஒப்புதல் அளித்தவுடன் நீங்கள் உள்நுழையலாம்.`
+            : `Thank you, ${memberName}! Your profile has been submitted to our moderation team. Once the admin approves your profile, you can sign in with your email and password.`}
         </Text>
 
         {/* Member ID Badge */}
@@ -245,7 +247,7 @@ export const PostRegistrationWelcomeScreen: React.FC<PostRegistrationWelcomeScre
           activeOpacity={0.88}
         >
           <Text style={styles.primaryButtonText}>
-            {isTa ? 'வரன்களைத் தேடுங்கள் ✨' : 'Explore Matches ✨'}
+            {isTa ? 'உள்நுழைவுப் பக்கத்திற்குச் செல்லவும் →' : 'Go to Sign In →'}
           </Text>
         </TouchableOpacity>
       </View>

@@ -83,7 +83,32 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({
         onLoginSuccess();
       }
     } catch (e: any) {
-      setValidationError(e?.message || (isTa ? 'உள்நுழைவு தோல்வியடைந்தது' : 'Sign in failed'));
+      const errMsg = e?.message || (isTa ? 'உள்நுழைவு தோல்வியடைந்தது' : 'Sign in failed');
+      setValidationError(errMsg);
+
+      const lowerMsg = errMsg.toLowerCase();
+      if (lowerMsg.includes('suspended')) {
+        Alert.alert(
+          isTa ? 'கணக்கு இடைநிறுத்தப்பட்டுள்ளது 🚫' : 'Account Suspended 🚫',
+          isTa
+            ? 'உங்கள் கணக்கு நிர்வாகியால் இடைநிறுத்தப்பட்டுள்ளது. தயவுசெய்து வாடிக்கையாளர் சேவையைத் தொடர்பு கொள்ளவும்.'
+            : errMsg
+        );
+      } else if (lowerMsg.includes('pending') || lowerMsg.includes('approval')) {
+        Alert.alert(
+          isTa ? 'நிர்வாகி ஒப்புதல் நிலுவையில் உள்ளது ⏳' : 'Pending Admin Approval ⏳',
+          isTa
+            ? 'உங்கள் சுயவிவரம் நிர்வாகியின் சரிபார்ப்பில் உள்ளது. நிர்வாகி ஒப்புதல் அளித்தவுடன் நீங்கள் உள்நுழையலாம்.'
+            : errMsg
+        );
+      } else if (lowerMsg.includes('rejected')) {
+        Alert.alert(
+          isTa ? 'சுயவிவரம் நிராகரிக்கப்பட்டது ❌' : 'Profile Verification Rejected ❌',
+          isTa
+            ? 'உங்கள் சுயவிவரச் சரிபார்ப்பு நிர்வாகியால் நிராகரிக்கப்பட்டது.'
+            : errMsg
+        );
+      }
     } finally {
       setLoading(false);
     }

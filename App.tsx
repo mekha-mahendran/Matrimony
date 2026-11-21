@@ -1025,8 +1025,7 @@ function ManamaalaiApp() {
             onToggleLanguage={handleToggleLanguage}
             onExploreMatches={async () => {
               await StorageService.setPostRegistrationWelcomeSeen(true);
-              setActiveTab('home');
-              setCurrentScreen('main');
+              setCurrentScreen('login');
             }}
           />
         );

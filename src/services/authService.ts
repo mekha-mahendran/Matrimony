@@ -31,7 +31,6 @@ export class AuthService {
         demoOtp: res.demoOtp || '123456',
       };
     } catch {
-      // Offline / fallback mode
       const mockOtp = '123456';
       this.generatedOtp = mockOtp;
       this.otpTargetPhone = cleanPhone;
@@ -47,46 +46,19 @@ export class AuthService {
   static async verifyOtp(phone: string, enteredOtp: string): Promise<CurrentUser> {
     const cleanPhone = phone.replace(/[^0-9]/g, '');
 
-    try {
-      const res = await apiService.verifyOtp(cleanPhone, enteredOtp);
-      if (res && res.user) {
-        if (res.profile) {
-          await StorageService.saveProfile(res.profile);
-        }
-        return await StorageService.updateCurrentUser({
-          ...res.user,
-          phone: cleanPhone,
-          activeProfileId: res.profile?.id || res.user.activeProfileId,
-        });
+    const res = await apiService.verifyOtp(cleanPhone, enteredOtp);
+    if (res && res.user) {
+      if (res.profile) {
+        await StorageService.saveProfile(res.profile);
       }
-    } catch (err: any) {
-      console.warn('[AuthService] Backend verifyOtp failed, trying local fallback:', err?.message);
-    }
-
-    // Local fallback check
-    if (enteredOtp !== '123456' && enteredOtp !== this.generatedOtp) {
-      throw new Error('Invalid verification code. Please enter 123456.');
-    }
-
-    // Check if user already exists
-    const currentUser = await StorageService.getCurrentUser();
-    if (currentUser.phone.includes(cleanPhone.slice(-10))) {
-      return currentUser;
-    }
-
-    // Find if any profile has this phone
-    const profiles = await StorageService.getAllProfiles();
-    const existing = profiles.find(p => p.phone.replace(/[^0-9]/g, '').includes(cleanPhone.slice(-10)));
-
-    if (existing) {
-      const updated = await StorageService.updateCurrentUser({
+      return await StorageService.updateCurrentUser({
+        ...res.user,
         phone: cleanPhone,
-        activeProfileId: existing.id,
+        activeProfileId: res.profile?.id || res.user.activeProfileId,
       });
-      return updated;
     }
 
-    return currentUser;
+    throw new Error('Verification failed. Please check your account status.');
   }
 
   static async loginWithEmail(email: string, pass: string): Promise<CurrentUser> {
@@ -94,50 +66,68 @@ export class AuthService {
       throw new Error('Please enter email and password');
     }
 
-    try {
-      // Connect to AWS Backend
-      const res = await apiService.login({ email: email.trim(), password: pass });
-      if (res && res.success && res.user) {
-        if (res.profile) {
-          await StorageService.saveProfile(res.profile);
-        }
-        const updated = await StorageService.updateCurrentUser({
-          ...res.user,
-          activeProfileId: res.profile?.id || res.user.activeProfileId,
-        });
-        return updated;
+    // Connect to AWS Backend and enforce admin approval & suspension checks
+    const res = await apiService.login({ email: email.trim(), password: pass });
+
+    if (res && res.success && res.user) {
+      // Double-check profile moderation status on client side as well
+      const profile = res.profile;
+      const status = (
+        profile?.status ||
+        res.user?.status ||
+        (profile?.isVerified === true ? 'approved' : 'pending')
+      ).toLowerCase();
+
+      if (status === 'suspended') {
+        await apiService.clearAuthToken();
+        throw new Error(
+          'Your account has been suspended by the administrator. Please contact support.'
+        );
       }
-    } catch (err: any) {
-      console.warn('[AuthService] Backend login error:', err?.message);
-      // If server returned a clear rejection (e.g. invalid credentials), re-throw
-      if (err.message && (err.message.includes('credentials') || err.message.includes('not found') || err.message.includes('password'))) {
-        throw err;
+
+      if (status === 'rejected') {
+        await apiService.clearAuthToken();
+        throw new Error(
+          profile?.rejectionReason
+            ? `Your profile verification was rejected: ${profile.rejectionReason}`
+            : 'Your profile verification was rejected by the administrator.'
+        );
       }
+
+      if (status !== 'approved' && status !== 'active' && profile?.isVerified !== true) {
+        await apiService.clearAuthToken();
+        throw new Error(
+          'Your profile is currently pending admin approval. You can log in once the administrator approves your profile.'
+        );
+      }
+
+      if (profile) {
+        await StorageService.saveProfile(profile);
+      }
+      const updated = await StorageService.updateCurrentUser({
+        ...res.user,
+        activeProfileId: profile?.id || res.user.activeProfileId,
+      });
+      return updated;
     }
 
-    // Fallback to local session
-    const user = await StorageService.getCurrentUser();
-    return user;
+    throw new Error(res?.message || 'Sign in failed');
   }
 
   static async registerUserWithBackend(registrationPayload: any): Promise<any> {
     try {
-      // Call AWS Backend
+      // Call AWS Backend to register profile (created with status: 'pending')
       const res = await apiService.register(registrationPayload);
+      // Clear token immediately after registration because user must wait for Admin approval before logging in
+      await apiService.clearAuthToken();
       if (res && res.success) {
         if (res.profile) {
           await StorageService.saveProfile(res.profile);
         }
-        if (res.user) {
-          await StorageService.updateCurrentUser({
-            ...res.user,
-            activeProfileId: res.profile?.id || res.user.activeProfileId,
-          });
-        }
         return res;
       }
     } catch (err: any) {
-      console.warn('[AuthService] Backend registration failed, continuing locally:', err?.message);
+      console.warn('[AuthService] Backend registration error:', err?.message);
       throw err;
     }
   }
