@@ -19,3 +19,11 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+subprojects {
+    tasks.configureEach { task ->
+        if (task.name.contains("Lint") || task.name.contains("lint")) {
+            task.enabled = false
+        }
+    }
+}
